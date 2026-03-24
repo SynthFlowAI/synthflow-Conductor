@@ -355,6 +355,7 @@ function saveKeys() {
   }
 
   sessionStorage.setItem("synthflow_key", sk);
+  posthog.identify(sk);
   posthog.capture("keys_configured");
   hideSetup();
 }
@@ -375,9 +376,10 @@ function updateStatus() {
   dot.classList.toggle("connected", hasKeys());
 }
 
-// Show setup on load if no keys
+// Show setup on load if no keys; identify returning users
 if (hasKeys()) {
   document.getElementById("setup-overlay").classList.add("hidden");
+  posthog.identify(getKeys().synthflow);
 }
 updateStatus();
 
