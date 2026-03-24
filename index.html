@@ -582,13 +582,14 @@ async function callClaude(msgs) {
   return res.json();
 }
 
-async function callSynthflow(method, path, payload) {
+async function callSynthflow(method, path, payload, traceId) {
   const keys = getKeys();
   const res = await fetch(`${WORKER_URL}/api/synthflow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-synthflow-key": keys.synthflow,
+      ...(traceId ? { "x-trace-id": traceId } : {}),
     },
     body: JSON.stringify({ method, path, payload }),
   });
@@ -600,17 +601,17 @@ async function callSynthflow(method, path, payload) {
 }
 
 // ── Tool execution ──────────────────────────────────────────────────
-async function executeTool(name, input) {
+async function executeTool(name, input, traceId) {
   switch (name) {
     case "create_assistant":
       return callSynthflow("POST", "/assistants", {
         name: input.name,
         type: input.type || "inbound",
         ...(input.agent ? { agent: input.agent } : {}),
-      });
+      }, traceId);
 
     case "list_assistants":
-      return callSynthflow("GET", `/assistants?limit=${input.limit || 20}`);
+      return callSynthflow("GET", `/assistants?limit=${input.limit || 20}`, null, traceId);
 
     case "create_call":
       return callSynthflow("POST", "/calls", {
@@ -618,7 +619,7 @@ async function executeTool(name, input) {
         phone_number: input.phone_number,
         ...(input.name ? { name: input.name } : {}),
         ...(input.custom_variables ? { custom_variables: input.custom_variables } : {}),
-      });
+      }, traceId);
 
     case "create_action":
       return callSynthflow("POST", "/actions", {
@@ -626,12 +627,12 @@ async function executeTool(name, input) {
         name: input.name,
         ...(input.description ? { description: input.description } : {}),
         ...(input.config ? { ...input.config } : {}),
-      });
+      }, traceId);
 
     case "attach_action":
       return callSynthflow("POST", `/assistants/${input.model_id}/actions`, {
         action_id: input.action_id,
-      });
+      }, traceId);
 
     default:
       return { error: `Unknown tool: ${name}` };
@@ -659,19 +660,20 @@ async function agentLoop(response) {
 
     messages.push({ role: "assistant", content: response.content });
 
+    const traceId = response.id;
     const toolResults = [];
     for (const tool of toolUses) {
       const uiId = addToolCall(tool.name, tool.input);
 
       let result;
       try {
-        result = await executeTool(tool.name, tool.input);
+        result = await executeTool(tool.name, tool.input, traceId);
         updateToolCall(uiId, "done", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "success" });
+        posthog.capture("tool_executed", { tool: tool.name, status: "success", $ai_trace_id: traceId });
       } catch (e) {
         result = { error: e.message };
         updateToolCall(uiId, "error", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message });
+        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: traceId });
       }
 
       toolResults.push({

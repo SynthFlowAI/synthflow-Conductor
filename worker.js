@@ -10,7 +10,7 @@ const POSTHOG_HOST = "https://eu.i.posthog.com";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-synthflow-key",
+  "Access-Control-Allow-Headers": "Content-Type, x-synthflow-key, x-trace-id",
 };
 
 export default {
@@ -28,7 +28,8 @@ export default {
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
-      return handleSynthflow(request, ctx, userId);
+      const traceId = request.headers.get("x-trace-id");
+      return handleSynthflow(request, ctx, userId, traceId);
     }
 
     return new Response("Not found", { status: 404 });
@@ -68,7 +69,7 @@ async function handleClaude(request, env, ctx, userId) {
 }
 
 // ── Synthflow proxy ─────────────────────────────────────────────────
-async function handleSynthflow(request, ctx, userId) {
+async function handleSynthflow(request, ctx, userId, traceId) {
   const apiKey = request.headers.get("x-synthflow-key");
   if (!apiKey) {
     return jsonResponse({ error: "Missing x-synthflow-key header" }, 401);
@@ -90,7 +91,7 @@ async function handleSynthflow(request, ctx, userId) {
   const durationMs = Date.now() - start;
 
   // Trace tool call to PostHog
-  ctx.waitUntil(traceToolCall(method || "POST", path, payload, result, upstream.status, durationMs, userId));
+  ctx.waitUntil(traceToolCall(method || "POST", path, payload, result, upstream.status, durationMs, userId, traceId));
 
   return new Response(result, {
     status: upstream.status,
@@ -136,7 +137,7 @@ async function traceGeneration(requestBody, responseBody, durationMs, userId) {
 }
 
 // ── PostHog tool call trace ─────────────────────────────────────────
-async function traceToolCall(method, path, payload, responseBody, httpStatus, durationMs, userId) {
+async function traceToolCall(method, path, payload, responseBody, httpStatus, durationMs, userId, traceId) {
   try {
     const toolName = path.replace(/^\//, "").split("/")[0].split("?")[0];
 
@@ -148,6 +149,7 @@ async function traceToolCall(method, path, payload, responseBody, httpStatus, du
         distinct_id: userId,
         event: "tool_executed",
         properties: {
+          $ai_trace_id: traceId,
           tool_name: toolName,
           tool_method: method,
           tool_path: path,
