@@ -451,8 +451,7 @@ if (hasKeys()) {
 // ── State ───────────────────────────────────────────────────────────
 let messages = [];
 let busy = false;
-let conversationTraceId = crypto.randomUUID();
-function getSessionId() { return posthog.get_session_id?.() || ""; }
+let conversationSessionId = crypto.randomUUID();
 
 // ── DOM helpers ─────────────────────────────────────────────────────
 const $chat = document.getElementById("chat");
@@ -497,7 +496,7 @@ function submitFeedback(btn, vote, traceId) {
     $survey_id: SURVEY_ID,
     $survey_response: vote,
     $ai_trace_id: traceId,
-    $ai_session_id: getSessionId(),
+    $ai_session_id: conversationSessionId,
   });
 }
 
@@ -557,14 +556,14 @@ function markdownish(text) {
 }
 
 // ── API calls ───────────────────────────────────────────────────────
-async function callClaude(msgs) {
+async function callClaude(msgs, traceId) {
   const res = await fetch(`${WORKER_URL}/api/claude`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-synthflow-key": getKeys().synthflow,
-      "x-trace-id": conversationTraceId,
-      "x-session-id": getSessionId(),
+      "x-trace-id": traceId,
+      "x-session-id": conversationSessionId,
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
@@ -593,7 +592,7 @@ async function callSynthflow(method, path, payload, traceId) {
       "Content-Type": "application/json",
       "x-synthflow-key": keys.synthflow,
       ...(traceId ? { "x-trace-id": traceId } : {}),
-      "x-session-id": getSessionId(),
+      "x-session-id": conversationSessionId,
     },
     body: JSON.stringify({ method, path, payload }),
   });
@@ -646,7 +645,7 @@ async function executeTool(name, input, traceId) {
 }
 
 // ── Agentic loop ────────────────────────────────────────────────────
-async function agentLoop(response) {
+async function agentLoop(response, traceId) {
   while (response.stop_reason === "tool_use") {
     let assistantText = "";
     const toolUses = [];
@@ -661,7 +660,7 @@ async function agentLoop(response) {
     }
 
     if (assistantText) {
-      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`, conversationTraceId);
+      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`, traceId);
     }
 
     messages.push({ role: "assistant", content: response.content });
@@ -671,13 +670,13 @@ async function agentLoop(response) {
 
       let result;
       try {
-        result = await executeTool(tool.name, tool.input, conversationTraceId);
+        result = await executeTool(tool.name, tool.input, traceId);
         updateToolCall(uiId, "done", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "success", $ai_trace_id: conversationTraceId, $ai_session_id: getSessionId() });
+        posthog.capture("tool_executed", { tool: tool.name, status: "success", $ai_trace_id: traceId, $ai_session_id: conversationSessionId });
       } catch (e) {
         result = { error: e.message };
         updateToolCall(uiId, "error", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: conversationTraceId, $ai_session_id: getSessionId() });
+        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: traceId, $ai_session_id: conversationSessionId });
       }
 
       toolResults.push({
@@ -688,7 +687,7 @@ async function agentLoop(response) {
     }
 
     messages.push({ role: "user", content: toolResults });
-    response = await callClaude(messages);
+    response = await callClaude(messages, traceId);
   }
 
   const finalText = response.content
@@ -697,7 +696,7 @@ async function agentLoop(response) {
     .join("");
 
   if (finalText.trim()) {
-    addMsg("assistant", `<p>${markdownish(finalText)}</p>`, conversationTraceId);
+    addMsg("assistant", `<p>${markdownish(finalText)}</p>`, traceId);
   }
 
   messages.push({ role: "assistant", content: response.content });
@@ -725,21 +724,23 @@ async function send() {
   $input.value = "";
   $input.style.height = "auto";
 
+  const messageTraceId = crypto.randomUUID();
+
   addMsg("user", escapeHtml(text));
-  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length, $ai_session_id: getSessionId() });
+  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
 
   const typing = addMsg("assistant", '<span class="typing">Thinking...</span>');
 
   messages.push({ role: "user", content: text });
 
   try {
-    const response = await callClaude(messages);
+    const response = await callClaude(messages, messageTraceId);
     typing.remove();
-    await agentLoop(response);
+    await agentLoop(response, messageTraceId);
   } catch (e) {
     typing.remove();
     addMsg("assistant", `<p style="color:var(--error)">Error: ${escapeHtml(e.message)}</p>`);
-    posthog.capture("conversation_error", { error: e.message });
+    posthog.capture("conversation_error", { error: e.message, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
     messages.pop();
   }
 
