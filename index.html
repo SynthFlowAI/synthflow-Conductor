@@ -289,13 +289,8 @@
 <!-- Key setup overlay -->
 <div id="setup-overlay">
   <div class="setup-card">
-    <h2>Connect your API keys</h2>
-    <p class="subtitle">Keys are stored in your browser only and sent per-request through a secure proxy. They are never persisted server-side.</p>
-    <div class="field">
-      <label>Anthropic API Key</label>
-      <input type="password" id="key-anthropic" placeholder="sk-ant-..." autocomplete="off">
-      <div class="hint">Powers the Claude assistant. Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
-    </div>
+    <h2>Connect your Synthflow key</h2>
+    <p class="subtitle">Your key is stored in your browser only and sent per-request through a secure proxy. It is never persisted server-side.</p>
     <div class="field">
       <label>Synthflow API Key</label>
       <input type="password" id="key-synthflow" placeholder="sk_..." autocomplete="off">
@@ -341,37 +336,31 @@ const WORKER_URL = "https://synthflow-proxy.fionn-13d.workers.dev";
 // ── Key management ──────────────────────────────────────────────────
 function getKeys() {
   return {
-    anthropic: sessionStorage.getItem("anthropic_key") || "",
     synthflow: sessionStorage.getItem("synthflow_key") || "",
   };
 }
 
 function hasKeys() {
-  const k = getKeys();
-  return k.anthropic.length > 0 && k.synthflow.length > 0;
+  return getKeys().synthflow.length > 0;
 }
 
 function saveKeys() {
-  const ak = document.getElementById("key-anthropic").value.trim();
   const sk = document.getElementById("key-synthflow").value.trim();
   const err = document.getElementById("setup-error");
 
-  if (!ak || !sk) {
-    err.textContent = "Both keys are required.";
+  if (!sk) {
+    err.textContent = "Synthflow API key is required.";
     err.style.display = "block";
     return;
   }
 
-  sessionStorage.setItem("anthropic_key", ak);
   sessionStorage.setItem("synthflow_key", sk);
   posthog.capture("keys_configured");
   hideSetup();
 }
 
 function showSetup() {
-  const k = getKeys();
-  document.getElementById("key-anthropic").value = k.anthropic;
-  document.getElementById("key-synthflow").value = k.synthflow;
+  document.getElementById("key-synthflow").value = getKeys().synthflow;
   document.getElementById("setup-error").style.display = "none";
   document.getElementById("setup-overlay").classList.remove("hidden");
 }
@@ -566,12 +555,10 @@ function markdownish(text) {
 
 // ── API calls (keys sent per-request via headers) ───────────────────
 async function callClaude(msgs) {
-  const keys = getKeys();
   const res = await fetch(`${WORKER_URL}/api/claude`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-anthropic-key": keys.anthropic,
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",

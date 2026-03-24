@@ -1,8 +1,8 @@
 // Cloudflare Worker — proxies Claude + Synthflow APIs with PostHog LLM tracing
 // Deploy: npx wrangler deploy worker.js --name synthflow-proxy
 //
-// No secrets needed — users pass their own API keys per request.
-// Only the PostHog key is baked in (it's a public write-only token).
+// Secrets: ANTHROPIC_API_KEY (set via `wrangler secret put ANTHROPIC_API_KEY`)
+// Users pass their own Synthflow key per request.
 
 const POSTHOG_KEY = "phc_dlyyp4oL77penk6jXtJRUUpotT7eiUk3wRSY1KzzpLi";
 const POSTHOG_HOST = "https://eu.i.posthog.com";
@@ -10,11 +10,11 @@ const POSTHOG_HOST = "https://eu.i.posthog.com";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-anthropic-key, x-synthflow-key",
+  "Access-Control-Allow-Headers": "Content-Type, x-synthflow-key",
 };
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
@@ -22,7 +22,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/claude" && request.method === "POST") {
-      return handleClaude(request);
+      return handleClaude(request, env);
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
@@ -34,10 +34,10 @@ export default {
 };
 
 // ── Claude proxy with LLM tracing ──────────────────────────────────
-async function handleClaude(request) {
-  const apiKey = request.headers.get("x-anthropic-key");
+async function handleClaude(request, env) {
+  const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return jsonResponse({ error: "Missing x-anthropic-key header" }, 401);
+    return jsonResponse({ error: "ANTHROPIC_API_KEY secret not configured" }, 500);
   }
 
   const body = await request.text();
