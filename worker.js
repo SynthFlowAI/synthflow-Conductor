@@ -24,7 +24,8 @@ export default {
     const userId = request.headers.get("x-synthflow-key") || "anonymous";
 
     if (url.pathname === "/api/claude" && request.method === "POST") {
-      return handleClaude(request, env, ctx, userId);
+      const traceId = request.headers.get("x-trace-id");
+      return handleClaude(request, env, ctx, userId, traceId);
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
@@ -37,7 +38,7 @@ export default {
 };
 
 // ── Claude proxy with LLM tracing ──────────────────────────────────
-async function handleClaude(request, env, ctx, userId) {
+async function handleClaude(request, env, ctx, userId, traceId) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "ANTHROPIC_API_KEY secret not configured" }, 500);
@@ -60,7 +61,7 @@ async function handleClaude(request, env, ctx, userId) {
   const durationMs = Date.now() - start;
 
   // Send PostHog LLM trace after response (kept alive by waitUntil)
-  ctx.waitUntil(traceGeneration(body, result, durationMs, userId));
+  ctx.waitUntil(traceGeneration(body, result, durationMs, userId, traceId));
 
   return new Response(result, {
     status: upstream.status,
@@ -100,7 +101,7 @@ async function handleSynthflow(request, ctx, userId, traceId) {
 }
 
 // ── PostHog LLM trace ───────────────────────────────────────────────
-async function traceGeneration(requestBody, responseBody, durationMs, userId) {
+async function traceGeneration(requestBody, responseBody, durationMs, userId, traceId) {
   try {
     const input = JSON.parse(requestBody);
     const output = JSON.parse(responseBody);
@@ -118,7 +119,7 @@ async function traceGeneration(requestBody, responseBody, durationMs, userId) {
           $ai_input_tokens: output.usage?.input_tokens ?? 0,
           $ai_output_tokens: output.usage?.output_tokens ?? 0,
           $ai_latency: durationMs / 1000,
-          $ai_trace_id: output.id,
+          $ai_trace_id: traceId || output.id,
           $ai_input: JSON.stringify(input.messages?.slice(-3)),
           $ai_output_choices: JSON.stringify([{ role: "assistant", content: output.content }]),
           $ai_is_error: output.type === "error",
