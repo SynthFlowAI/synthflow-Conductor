@@ -14,7 +14,7 @@ const CORS_HEADERS = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
@@ -22,7 +22,7 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/claude" && request.method === "POST") {
-      return handleClaude(request, env);
+      return handleClaude(request, env, ctx);
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
@@ -34,7 +34,7 @@ export default {
 };
 
 // ── Claude proxy with LLM tracing ──────────────────────────────────
-async function handleClaude(request, env) {
+async function handleClaude(request, env, ctx) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "ANTHROPIC_API_KEY secret not configured" }, 500);
@@ -56,11 +56,8 @@ async function handleClaude(request, env) {
   const result = await upstream.text();
   const durationMs = Date.now() - start;
 
-  // Fire-and-forget PostHog LLM trace (uses waitUntil if available)
-  const tracePromise = traceGeneration(body, result, durationMs);
-  if (typeof globalThis.ctx !== "undefined" && ctx.waitUntil) {
-    ctx.waitUntil(tracePromise);
-  }
+  // Send PostHog LLM trace after response (kept alive by waitUntil)
+  ctx.waitUntil(traceGeneration(body, result, durationMs));
 
   return new Response(result, {
     status: upstream.status,
