@@ -452,6 +452,7 @@ if (hasKeys()) {
 let messages = [];
 let busy = false;
 let conversationTraceId = crypto.randomUUID();
+function getSessionId() { return posthog.get_session_id?.() || ""; }
 
 // ── DOM helpers ─────────────────────────────────────────────────────
 const $chat = document.getElementById("chat");
@@ -496,6 +497,7 @@ function submitFeedback(btn, vote, traceId) {
     $survey_id: SURVEY_ID,
     $survey_response: vote,
     $ai_trace_id: traceId,
+    $ai_session_id: getSessionId(),
   });
 }
 
@@ -562,6 +564,7 @@ async function callClaude(msgs) {
       "Content-Type": "application/json",
       "x-synthflow-key": getKeys().synthflow,
       "x-trace-id": conversationTraceId,
+      "x-session-id": getSessionId(),
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
@@ -590,6 +593,7 @@ async function callSynthflow(method, path, payload, traceId) {
       "Content-Type": "application/json",
       "x-synthflow-key": keys.synthflow,
       ...(traceId ? { "x-trace-id": traceId } : {}),
+      "x-session-id": getSessionId(),
     },
     body: JSON.stringify({ method, path, payload }),
   });
@@ -669,11 +673,11 @@ async function agentLoop(response) {
       try {
         result = await executeTool(tool.name, tool.input, conversationTraceId);
         updateToolCall(uiId, "done", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "success", $ai_trace_id: conversationTraceId });
+        posthog.capture("tool_executed", { tool: tool.name, status: "success", $ai_trace_id: conversationTraceId, $ai_session_id: getSessionId() });
       } catch (e) {
         result = { error: e.message };
         updateToolCall(uiId, "error", result);
-        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: conversationTraceId });
+        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: conversationTraceId, $ai_session_id: getSessionId() });
       }
 
       toolResults.push({
@@ -722,7 +726,7 @@ async function send() {
   $input.style.height = "auto";
 
   addMsg("user", escapeHtml(text));
-  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length });
+  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length, $ai_session_id: getSessionId() });
 
   const typing = addMsg("assistant", '<span class="typing">Thinking...</span>');
 

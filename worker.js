@@ -10,7 +10,7 @@ const POSTHOG_HOST = "https://eu.i.posthog.com";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, x-synthflow-key, x-trace-id",
+  "Access-Control-Allow-Headers": "Content-Type, x-synthflow-key, x-trace-id, x-session-id",
 };
 
 export default {
@@ -22,15 +22,15 @@ export default {
     const url = new URL(request.url);
 
     const userId = request.headers.get("x-synthflow-key") || "anonymous";
+    const traceId = request.headers.get("x-trace-id");
+    const sessionId = request.headers.get("x-session-id");
 
     if (url.pathname === "/api/claude" && request.method === "POST") {
-      const traceId = request.headers.get("x-trace-id");
-      return handleClaude(request, env, ctx, userId, traceId);
+      return handleClaude(request, env, ctx, userId, traceId, sessionId);
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
-      const traceId = request.headers.get("x-trace-id");
-      return handleSynthflow(request, ctx, userId, traceId);
+      return handleSynthflow(request, ctx, userId, traceId, sessionId);
     }
 
     return new Response("Not found", { status: 404 });
@@ -38,7 +38,7 @@ export default {
 };
 
 // ── Claude proxy with LLM tracing ──────────────────────────────────
-async function handleClaude(request, env, ctx, userId, traceId) {
+async function handleClaude(request, env, ctx, userId, traceId, sessionId) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "ANTHROPIC_API_KEY secret not configured" }, 500);
@@ -61,7 +61,7 @@ async function handleClaude(request, env, ctx, userId, traceId) {
   const durationMs = Date.now() - start;
 
   // Send PostHog LLM trace after response (kept alive by waitUntil)
-  ctx.waitUntil(traceGeneration(body, result, durationMs, userId, traceId));
+  ctx.waitUntil(traceGeneration(body, result, durationMs, userId, traceId, sessionId));
 
   return new Response(result, {
     status: upstream.status,
@@ -70,7 +70,7 @@ async function handleClaude(request, env, ctx, userId, traceId) {
 }
 
 // ── Synthflow proxy ─────────────────────────────────────────────────
-async function handleSynthflow(request, ctx, userId, traceId) {
+async function handleSynthflow(request, ctx, userId, traceId, sessionId) {
   const apiKey = request.headers.get("x-synthflow-key");
   if (!apiKey) {
     return jsonResponse({ error: "Missing x-synthflow-key header" }, 401);
@@ -92,7 +92,7 @@ async function handleSynthflow(request, ctx, userId, traceId) {
   const durationMs = Date.now() - start;
 
   // Trace tool call to PostHog
-  ctx.waitUntil(traceToolCall(method || "POST", path, payload, result, upstream.status, durationMs, userId, traceId));
+  ctx.waitUntil(traceToolCall(method || "POST", path, payload, result, upstream.status, durationMs, userId, traceId, sessionId));
 
   return new Response(result, {
     status: upstream.status,
@@ -101,7 +101,7 @@ async function handleSynthflow(request, ctx, userId, traceId) {
 }
 
 // ── PostHog LLM trace ───────────────────────────────────────────────
-async function traceGeneration(requestBody, responseBody, durationMs, userId, traceId) {
+async function traceGeneration(requestBody, responseBody, durationMs, userId, traceId, sessionId) {
   try {
     const input = JSON.parse(requestBody);
     const output = JSON.parse(responseBody);
@@ -120,6 +120,7 @@ async function traceGeneration(requestBody, responseBody, durationMs, userId, tr
           $ai_output_tokens: output.usage?.output_tokens ?? 0,
           $ai_latency: durationMs / 1000,
           $ai_trace_id: traceId || output.id,
+          ...(sessionId ? { $ai_session_id: sessionId } : {}),
           $ai_input: JSON.stringify(input.messages?.slice(-3)),
           $ai_output_choices: JSON.stringify([{ role: "assistant", content: output.content }]),
           $ai_is_error: output.type === "error",
@@ -138,7 +139,7 @@ async function traceGeneration(requestBody, responseBody, durationMs, userId, tr
 }
 
 // ── PostHog tool call trace ─────────────────────────────────────────
-async function traceToolCall(method, path, payload, responseBody, httpStatus, durationMs, userId, traceId) {
+async function traceToolCall(method, path, payload, responseBody, httpStatus, durationMs, userId, traceId, sessionId) {
   try {
     const toolName = path.replace(/^\//, "").split("/")[0].split("?")[0];
 
@@ -151,6 +152,7 @@ async function traceToolCall(method, path, payload, responseBody, httpStatus, du
         event: "tool_executed",
         properties: {
           $ai_trace_id: traceId,
+          ...(sessionId ? { $ai_session_id: sessionId } : {}),
           tool_name: toolName,
           tool_method: method,
           tool_path: path,
