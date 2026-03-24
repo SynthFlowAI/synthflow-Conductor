@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Synthflow Voice AI Assistant</title>
+<title>Synthflow Conductor</title>
 <script>
   !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
   posthog.init('phc_dlyyp4oL77penk6jXtJRUUpotT7eiUk3wRSY1KzzpLi', {
@@ -13,21 +13,25 @@
 </script>
 <style>
   :root {
-    --bg: #0a0a0a;
-    --surface: #141414;
-    --border: #262626;
-    --text: #e5e5e5;
-    --muted: #737373;
-    --accent: #6366f1;
-    --accent-dim: #4338ca;
-    --tool-bg: #1a1625;
-    --tool-border: #2d2640;
-    --success: #22c55e;
+    --bg: #212121;
+    --bg-alt: #2f2f2f;
+    --surface: #303030;
+    --surface-hover: #3a3a3a;
+    --border: #424242;
+    --text: #ececec;
+    --text-secondary: #b4b4b4;
+    --muted: #8e8e8e;
+    --accent: #10a37f;
+    --accent-hover: #0d8c6d;
+    --tool-bg: #1e2a2a;
+    --tool-border: #2a3f3f;
+    --success: #10a37f;
     --error: #ef4444;
+    --user-bg: #303030;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Söhne', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     height: 100vh;
@@ -35,42 +39,16 @@
     flex-direction: column;
   }
 
-  header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  header h1 { font-size: 16px; font-weight: 600; }
-  header span { font-size: 12px; color: var(--muted); }
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted);
-  }
-  .status-dot.connected { background: var(--success); }
-  .settings-btn {
-    margin-left: auto;
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 10px;
-    color: var(--muted);
-    font-size: 12px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .settings-btn:hover { border-color: var(--accent); color: var(--text); }
-
   /* ── Key setup overlay ───────────────────────────────── */
   #setup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
+    backdrop-filter: blur(4px);
   }
   #setup-overlay.hidden { display: none; }
   .setup-card {
@@ -78,26 +56,24 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 32px;
-    max-width: 440px;
+    max-width: 420px;
     width: 100%;
   }
   .setup-card h2 { font-size: 18px; margin-bottom: 4px; }
-  .setup-card .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .setup-card .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
   .field { margin-bottom: 16px; }
   .field label {
     display: block;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     margin-bottom: 6px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: var(--text-secondary);
   }
   .field input {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 10px 12px;
     color: var(--text);
     font-size: 14px;
@@ -105,70 +81,94 @@
     outline: none;
   }
   .field input:focus { border-color: var(--accent); }
-  .field input::placeholder { color: #444; }
-  .field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
-  .setup-actions { display: flex; gap: 8px; margin-top: 24px; }
+  .field input::placeholder { color: #555; }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .field .hint a { color: var(--accent); text-decoration: none; }
+  .field .hint a:hover { text-decoration: underline; }
+  .setup-actions { margin-top: 24px; }
   .setup-actions button {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     font-family: inherit;
     border: none;
+    background: var(--accent);
+    color: white;
   }
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover { background: var(--accent-dim); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border) !important; }
-  .btn-secondary:hover { border-color: var(--accent) !important; }
-  .setup-error { color: var(--error); font-size: 12px; margin-top: 8px; display: none; }
+  .setup-actions button:hover { background: var(--accent-hover); }
+  .setup-error { color: var(--error); font-size: 13px; margin-top: 8px; display: none; }
 
-  /* ── Chat ─────────────────────────────────────────────── */
+  /* ── Chat area ─────────────────────────────────────────── */
   #chat {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
   }
 
-  .msg {
-    max-width: 720px;
+  .msg-row {
+    padding: 24px 0;
+  }
+  .msg-row:last-child { padding-bottom: 8px; }
+  .msg-inner {
+    max-width: 680px;
     width: 100%;
     margin: 0 auto;
-    line-height: 1.6;
+    padding: 0 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
   }
-  .msg.user {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 16px;
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
   }
-  .msg.assistant { padding: 4px 0; }
-  .msg.assistant p { margin-bottom: 8px; }
-  .msg.assistant code {
-    background: var(--surface);
+  .msg-avatar.user { background: #5436da; color: white; }
+  .msg-avatar.assistant { background: var(--accent); color: white; }
+  .msg-content {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .msg-content p { margin-bottom: 8px; }
+  .msg-content p:last-child { margin-bottom: 0; }
+  .msg-content code {
+    background: var(--bg-alt);
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 13px;
   }
-  .msg.assistant pre {
-    background: var(--surface);
-    border: 1px solid var(--border);
+  .msg-content pre {
+    background: #1e1e1e;
     border-radius: 8px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     overflow-x: auto;
     margin: 8px 0;
     font-size: 13px;
+    line-height: 1.5;
   }
+  .msg-content strong { font-weight: 600; }
 
+  /* ── Tool calls ─────────────────────────────────────────── */
   .tool-call {
-    max-width: 720px;
-    width: 100%;
+    max-width: 680px;
     margin: 0 auto;
+    padding: 0 24px 0 68px;
+  }
+  .tool-inner {
     background: var(--tool-bg);
     border: 1px solid var(--tool-border);
     border-radius: 10px;
@@ -184,7 +184,7 @@
     color: var(--accent);
     cursor: pointer;
   }
-  .tool-header:hover { background: rgba(99,102,241,0.06); }
+  .tool-header:hover { background: rgba(16,163,127,0.06); }
   .tool-header .arrow { transition: transform 0.2s; font-size: 10px; }
   .tool-header .arrow.open { transform: rotate(90deg); }
   .tool-badge {
@@ -194,8 +194,8 @@
     font-weight: 500;
     margin-left: auto;
   }
-  .tool-badge.running { background: rgba(99,102,241,0.15); color: var(--accent); }
-  .tool-badge.done { background: rgba(34,197,94,0.15); color: var(--success); }
+  .tool-badge.running { background: rgba(16,163,127,0.15); color: var(--accent); }
+  .tool-badge.done { background: rgba(16,163,127,0.15); color: var(--success); }
   .tool-badge.error { background: rgba(239,68,68,0.15); color: var(--error); }
   .tool-body {
     display: none;
@@ -204,7 +204,7 @@
   }
   .tool-body.open { display: block; }
   .tool-body pre {
-    background: var(--bg);
+    background: #1a1a1a;
     padding: 10px;
     border-radius: 6px;
     overflow-x: auto;
@@ -221,142 +221,195 @@
     margin-bottom: 2px;
   }
 
+  /* ── Feedback buttons ───────────────────────────────────── */
+  .feedback {
+    display: flex;
+    gap: 2px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .msg-row:hover .feedback { opacity: 1; }
+  .feedback.voted { opacity: 1; }
+  .feedback button {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 6px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .feedback button:hover { background: var(--surface-hover); color: var(--text); }
+  .feedback button.active { color: var(--accent); }
+  .feedback button:disabled { cursor: default; }
+
+  /* ── Input area ─────────────────────────────────────────── */
   #input-area {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
+    padding: 0 24px 24px;
   }
   #input-wrap {
-    max-width: 720px;
+    max-width: 680px;
     margin: 0 auto;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 24px;
     display: flex;
-    gap: 8px;
+    align-items: flex-end;
+    padding: 8px 8px 8px 20px;
+    transition: border-color 0.15s;
   }
+  #input-wrap:focus-within { border-color: #555; }
   #input {
     flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
+    background: none;
+    border: none;
     color: var(--text);
-    font-size: 14px;
+    font-size: 15px;
     font-family: inherit;
     resize: none;
     outline: none;
-    min-height: 44px;
-    max-height: 120px;
+    min-height: 24px;
+    max-height: 160px;
+    padding: 6px 0;
+    line-height: 1.5;
   }
-  #input:focus { border-color: var(--accent); }
   #input::placeholder { color: var(--muted); }
   #send {
-    background: var(--accent);
-    color: white;
+    background: var(--text);
+    color: var(--bg);
     border: none;
-    border-radius: 10px;
-    padding: 0 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  #send:hover { background: var(--accent-dim); }
-  #send:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .typing { color: var(--muted); font-style: italic; font-size: 13px; }
-
-  .feedback {
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
     display: flex;
-    gap: 4px;
-    margin-top: 4px;
-  }
-  .feedback button {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 8px;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    transition: all 0.15s;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
   }
-  .feedback button:hover { border-color: var(--accent); background: var(--surface); }
-  .feedback button.active { border-color: var(--accent); background: rgba(99,102,241,0.15); }
-  .feedback button:disabled { opacity: 0.4; cursor: default; }
+  #send:hover { opacity: 0.8; }
+  #send:disabled { opacity: 0.3; cursor: not-allowed; }
+  #send svg { width: 18px; height: 18px; }
 
-  .examples {
-    max-width: 720px;
-    margin: 0 auto;
+  .typing { color: var(--muted); font-style: italic; font-size: 14px; }
+
+  /* ── Welcome screen ─────────────────────────────────────── */
+  #welcome {
+    flex: 1;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 40px 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
   }
-  .examples button {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 14px;
+  #welcome.hidden { display: none; }
+  #welcome h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 32px;
     color: var(--text);
-    font-size: 13px;
+  }
+  .suggestions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-width: 600px;
+    width: 100%;
+  }
+  @media (max-width: 560px) { .suggestions { grid-template-columns: 1fr; } }
+  .suggestions button {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
     cursor: pointer;
     font-family: inherit;
+    text-align: left;
+    line-height: 1.4;
+    transition: background 0.15s, border-color 0.15s;
   }
-  .examples button:hover { border-color: var(--accent); }
+  .suggestions button:hover { background: var(--surface-hover); border-color: #555; }
+
+  /* ── Settings gear ──────────────────────────────────────── */
+  .gear-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    z-index: 10;
+  }
+  .gear-btn:hover { background: var(--surface); color: var(--text); }
+  .gear-btn svg { width: 20px; height: 20px; display: block; }
 </style>
 </head>
 <body>
 
+<!-- Settings gear -->
+<button class="gear-btn" onclick="showSetup()" title="Settings">
+  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
+
 <!-- Key setup overlay -->
 <div id="setup-overlay">
   <div class="setup-card">
-    <h2>Connect your Synthflow key</h2>
-    <p class="subtitle">Your key is stored in your browser only and sent per-request through a secure proxy. It is never persisted server-side.</p>
+    <h2>Connect to Synthflow</h2>
+    <p class="subtitle">Your key is stored in your browser session only and sent per-request through a secure proxy.</p>
     <div class="field">
       <label>Synthflow API Key</label>
       <input type="password" id="key-synthflow" placeholder="sk_..." autocomplete="off">
-      <div class="hint">Used to create assistants, calls, and actions. Get one at <a href="https://app.synthflow.ai" target="_blank" style="color:var(--accent)">app.synthflow.ai</a></div>
+      <div class="hint">Get your key at <a href="https://app.synthflow.ai" target="_blank">app.synthflow.ai</a></div>
     </div>
     <div class="setup-error" id="setup-error"></div>
     <div class="setup-actions">
-      <button class="btn-primary" id="setup-save" onclick="saveKeys()">Connect</button>
+      <button id="setup-save" onclick="saveKeys()">Continue</button>
     </div>
   </div>
 </div>
 
-<header>
-  <div class="status-dot" id="status-dot"></div>
-  <h1>Synthflow Assistant</h1>
-  <span>Voice AI builder powered by Claude</span>
-  <button class="settings-btn" onclick="showSetup()">API Keys</button>
-</header>
-
-<div id="chat">
-  <div class="examples">
+<!-- Welcome screen -->
+<div id="welcome">
+  <h1>Synthflow Conductor</h1>
+  <div class="suggestions">
     <button onclick="sendExample(this)">Create an inbound support agent</button>
-    <button onclick="sendExample(this)">Make an outbound call to +1234567890</button>
-    <button onclick="sendExample(this)">Add a live transfer action to my assistant</button>
-    <button onclick="sendExample(this)">Set up an SMS action that sends booking confirmations</button>
+    <button onclick="sendExample(this)">Make an outbound call to a number</button>
+    <button onclick="sendExample(this)">Add a live transfer action</button>
     <button onclick="sendExample(this)">List my assistants</button>
   </div>
 </div>
 
+<!-- Chat -->
+<div id="chat" class="hidden"></div>
+
+<!-- Input -->
 <div id="input-area">
   <div id="input-wrap">
-    <textarea id="input" rows="1" placeholder="Ask me to build voice AI with Synthflow..."
+    <textarea id="input" rows="1" placeholder="Message Synthflow Conductor..."
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
-    <button id="send" onclick="send()">Send</button>
+    <button id="send" onclick="send()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
   </div>
 </div>
 
 <script>
 // ── Config ──────────────────────────────────────────────────────────
-// Point this at your Cloudflare Worker URL
 const WORKER_URL = "https://synthflow-proxy.fionn-13d.workers.dev";
 
 // ── Key management ──────────────────────────────────────────────────
 function getKeys() {
-  return {
-    synthflow: sessionStorage.getItem("synthflow_key") || "",
-  };
+  return { synthflow: sessionStorage.getItem("synthflow_key") || "" };
 }
 
 function hasKeys() {
@@ -387,20 +440,12 @@ function showSetup() {
 
 function hideSetup() {
   document.getElementById("setup-overlay").classList.add("hidden");
-  updateStatus();
 }
 
-function updateStatus() {
-  const dot = document.getElementById("status-dot");
-  dot.classList.toggle("connected", hasKeys());
-}
-
-// Show setup on load if no keys; identify returning users
 if (hasKeys()) {
   document.getElementById("setup-overlay").classList.add("hidden");
   posthog.identify(getKeys().synthflow);
 }
-updateStatus();
 
 // ── Synthflow tool definitions ──────────────────────────────────────
 const TOOLS = [
@@ -485,7 +530,7 @@ const TOOLS = [
   }
 ];
 
-const SYSTEM_PROMPT = `You are a Synthflow voice AI assistant builder. You help users create and configure voice AI assistants, make calls, and set up actions using the Synthflow platform.
+const SYSTEM_PROMPT = `You are Synthflow Conductor, a voice AI assistant builder. You help users create and configure voice AI assistants, make calls, and set up actions using the Synthflow platform.
 
 When the user asks you to create something, use the appropriate tool. Be conversational and helpful. After creating resources, summarize what was created and suggest next steps.
 
@@ -501,6 +546,7 @@ let busy = false;
 
 // ── DOM helpers ─────────────────────────────────────────────────────
 const $chat = document.getElementById("chat");
+const $welcome = document.getElementById("welcome");
 const $input = document.getElementById("input");
 const $send = document.getElementById("send");
 
@@ -511,22 +557,26 @@ function scrollDown() {
 const SURVEY_ID = "019d1f98-83b6-0000-7bae-b269a2a30d9e";
 
 function addMsg(role, html, traceId) {
-  const d = document.createElement("div");
-  d.className = `msg ${role}`;
-  d.innerHTML = html;
+  const row = document.createElement("div");
+  row.className = "msg-row";
+
+  const avatar = role === "user" ? "Y" : "S";
+  const avatarClass = role === "user" ? "user" : "assistant";
+
+  let feedbackHtml = "";
   if (role === "assistant" && traceId) {
-    const fb = document.createElement("div");
-    fb.className = "feedback";
-    fb.innerHTML = `<button onclick="submitFeedback(this,'up','${traceId}')">&#x1F44D;</button><button onclick="submitFeedback(this,'down','${traceId}')">&#x1F44E;</button>`;
-    d.appendChild(fb);
+    feedbackHtml = `<div class="feedback"><button onclick="submitFeedback(this,'up','${traceId}')">&#x1F44D;</button><button onclick="submitFeedback(this,'down','${traceId}')">&#x1F44E;</button></div>`;
   }
-  $chat.appendChild(d);
+
+  row.innerHTML = `<div class="msg-inner"><div class="msg-avatar ${avatarClass}">${avatar}</div><div class="msg-content">${html}${feedbackHtml}</div></div>`;
+  $chat.appendChild(row);
   scrollDown();
-  return d;
+  return row;
 }
 
 function submitFeedback(btn, vote, traceId) {
   const fb = btn.parentElement;
+  fb.classList.add("voted");
   fb.querySelectorAll("button").forEach(b => {
     b.classList.remove("active");
     b.disabled = true;
@@ -545,7 +595,7 @@ function addToolCall(name, input, status = "running") {
   const d = document.createElement("div");
   d.className = "tool-call";
   d.id = id;
-  d.innerHTML = `
+  d.innerHTML = `<div class="tool-inner">
     <div class="tool-header" onclick="toggleTool('${id}')">
       <span class="arrow" id="${id}-arrow">&#9654;</span>
       <span>${formatToolName(name)}</span>
@@ -555,7 +605,7 @@ function addToolCall(name, input, status = "running") {
       <label>Input</label>
       <pre>${JSON.stringify(input, null, 2)}</pre>
       <div id="${id}-result"></div>
-    </div>`;
+    </div></div>`;
   $chat.appendChild(d);
   scrollDown();
   return id;
@@ -574,10 +624,8 @@ function updateToolCall(id, status, result) {
 }
 
 function toggleTool(id) {
-  const body = document.getElementById(id + "-body");
-  const arrow = document.getElementById(id + "-arrow");
-  body.classList.toggle("open");
-  arrow.classList.toggle("open");
+  document.getElementById(id + "-body").classList.toggle("open");
+  document.getElementById(id + "-arrow").classList.toggle("open");
 }
 
 function formatToolName(name) {
@@ -597,7 +645,7 @@ function markdownish(text) {
     .replace(/\n/g, '<br>');
 }
 
-// ── API calls (keys sent per-request via headers) ───────────────────
+// ── API calls ───────────────────────────────────────────────────────
 async function callClaude(msgs) {
   const res = await fetch(`${WORKER_URL}/api/claude`, {
     method: "POST",
@@ -617,9 +665,9 @@ async function callClaude(msgs) {
     const body = await res.text();
     if (res.status === 401) {
       showSetup();
-      throw new Error("Invalid Anthropic API key. Please check your key and try again.");
+      throw new Error("Invalid API key. Please check your key and try again.");
     }
-    throw new Error(`Claude API error: ${res.status} — ${body.slice(0, 200)}`);
+    throw new Error(`API error: ${res.status} — ${body.slice(0, 200)}`);
   }
   return res.json();
 }
@@ -742,6 +790,11 @@ async function agentLoop(response) {
 }
 
 // ── Send message ────────────────────────────────────────────────────
+function showChat() {
+  $welcome.classList.add("hidden");
+  $chat.classList.remove("hidden");
+}
+
 async function send() {
   const text = $input.value.trim();
   if (!text || busy) return;
@@ -751,8 +804,7 @@ async function send() {
     return;
   }
 
-  const examples = $chat.querySelector(".examples");
-  if (examples) examples.remove();
+  showChat();
 
   busy = true;
   $send.disabled = true;
@@ -790,7 +842,7 @@ function sendExample(btn) {
 // Auto-resize textarea
 $input.addEventListener("input", () => {
   $input.style.height = "auto";
-  $input.style.height = Math.min($input.scrollHeight, 120) + "px";
+  $input.style.height = Math.min($input.scrollHeight, 160) + "px";
 });
 </script>
 </body>
