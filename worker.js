@@ -120,7 +120,7 @@ async function traceGeneration(requestBody, responseBody, durationMs, userId) {
           $ai_latency: durationMs / 1000,
           $ai_trace_id: output.id,
           $ai_input: JSON.stringify(input.messages?.slice(-3)),
-          $ai_output_choices: JSON.stringify(output.content),
+          $ai_output_choices: JSON.stringify([{ role: "assistant", content: output.content }]),
           $ai_is_error: output.type === "error",
           $ai_http_status: output.type === "error" ? 400 : 200,
           tool_count: (output.content || []).filter((b) => b.type === "tool_use").length,
