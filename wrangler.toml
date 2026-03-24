@@ -1,3 +1,4 @@
 name = "synthflow-proxy"
 main = "worker.js"
 compatibility_date = "2024-01-01"
+account_id = "13dbb522b39794e72e0c6908244a14fe"
