@@ -21,12 +21,14 @@ export default {
 
     const url = new URL(request.url);
 
+    const userId = request.headers.get("x-synthflow-key") || "anonymous";
+
     if (url.pathname === "/api/claude" && request.method === "POST") {
-      return handleClaude(request, env, ctx);
+      return handleClaude(request, env, ctx, userId);
     }
 
     if (url.pathname === "/api/synthflow" && request.method === "POST") {
-      return handleSynthflow(request);
+      return handleSynthflow(request, ctx, userId);
     }
 
     return new Response("Not found", { status: 404 });
@@ -34,7 +36,7 @@ export default {
 };
 
 // ── Claude proxy with LLM tracing ──────────────────────────────────
-async function handleClaude(request, env, ctx) {
+async function handleClaude(request, env, ctx, userId) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "ANTHROPIC_API_KEY secret not configured" }, 500);
@@ -57,7 +59,7 @@ async function handleClaude(request, env, ctx) {
   const durationMs = Date.now() - start;
 
   // Send PostHog LLM trace after response (kept alive by waitUntil)
-  ctx.waitUntil(traceGeneration(body, result, durationMs));
+  ctx.waitUntil(traceGeneration(body, result, durationMs, userId));
 
   return new Response(result, {
     status: upstream.status,
@@ -66,13 +68,14 @@ async function handleClaude(request, env, ctx) {
 }
 
 // ── Synthflow proxy ─────────────────────────────────────────────────
-async function handleSynthflow(request) {
+async function handleSynthflow(request, ctx, userId) {
   const apiKey = request.headers.get("x-synthflow-key");
   if (!apiKey) {
     return jsonResponse({ error: "Missing x-synthflow-key header" }, 401);
   }
 
   const { method, path, payload } = await request.json();
+  const start = Date.now();
 
   const upstream = await fetch(`https://api.synthflow.ai/v2${path}`, {
     method: method || "POST",
@@ -84,6 +87,11 @@ async function handleSynthflow(request) {
   });
 
   const result = await upstream.text();
+  const durationMs = Date.now() - start;
+
+  // Trace tool call to PostHog
+  ctx.waitUntil(traceToolCall(method || "POST", path, payload, result, upstream.status, durationMs, userId));
+
   return new Response(result, {
     status: upstream.status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
@@ -91,7 +99,7 @@ async function handleSynthflow(request) {
 }
 
 // ── PostHog LLM trace ───────────────────────────────────────────────
-async function traceGeneration(requestBody, responseBody, durationMs) {
+async function traceGeneration(requestBody, responseBody, durationMs, userId) {
   try {
     const input = JSON.parse(requestBody);
     const output = JSON.parse(responseBody);
@@ -101,7 +109,7 @@ async function traceGeneration(requestBody, responseBody, durationMs) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         api_key: POSTHOG_KEY,
-        distinct_id: "synthflow-demo",
+        distinct_id: userId,
         event: "$ai_generation",
         properties: {
           $ai_provider: "anthropic",
@@ -124,6 +132,36 @@ async function traceGeneration(requestBody, responseBody, durationMs) {
     });
   } catch (e) {
     console.error("PostHog trace error:", e.message);
+  }
+}
+
+// ── PostHog tool call trace ─────────────────────────────────────────
+async function traceToolCall(method, path, payload, responseBody, httpStatus, durationMs, userId) {
+  try {
+    const toolName = path.replace(/^\//, "").split("/")[0].split("?")[0];
+
+    await fetch(`${POSTHOG_HOST}/capture/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: POSTHOG_KEY,
+        distinct_id: userId,
+        event: "tool_executed",
+        properties: {
+          tool_name: toolName,
+          tool_method: method,
+          tool_path: path,
+          tool_input: payload ? JSON.stringify(payload) : null,
+          tool_output: responseBody.slice(0, 2000),
+          tool_http_status: httpStatus,
+          tool_latency: durationMs / 1000,
+          tool_is_error: httpStatus >= 400,
+        },
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch (e) {
+    console.error("PostHog tool trace error:", e.message);
   }
 }
 
