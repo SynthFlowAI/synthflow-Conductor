@@ -98,6 +98,59 @@ const TOOLS = [
     }
   },
   {
+    name: "add_info_extractors",
+    description: "Add information extractor actions to an assistant. Extracts structured data from conversations. Automatically merges with existing actions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "The assistant's model_id" },
+        extractors: {
+          type: "array",
+          description: "Information extractors to add",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Human-readable action name" },
+              subtype: { type: "string", enum: ["YES_NO", "SINGLE_CHOICE", "OPEN_QUESTION"], description: "Extraction type" },
+              identifier: { type: "string", description: "Unique key for this extraction (used in results)" },
+              description: { type: "string", description: "What to extract from the conversation" },
+              choices: { type: "array", items: { type: "string" }, description: "Options for SINGLE_CHOICE subtype" },
+              examples: { type: "array", items: { type: "string" }, description: "Example answers for OPEN_QUESTION subtype" },
+            },
+            required: ["name", "subtype", "identifier", "description"]
+          }
+        }
+      },
+      required: ["model_id", "extractors"]
+    }
+  },
+  {
+    name: "add_custom_evals",
+    description: "Add custom post-call evaluation actions to an assistant. Evals are scored against the call transcript after the call ends. Automatically merges with existing actions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "The assistant's model_id" },
+        evals: {
+          type: "array",
+          description: "Custom evaluations to add",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Human-readable action name" },
+              identifier: { type: "string", description: "Unique key for this eval (used in results)" },
+              text: { type: "string", description: "The evaluation question — analyzed against the call transcript" },
+              category: { type: "string", enum: ["pass_fail", "numeric", "descriptive", "likert_scale"], description: "Scoring type: pass_fail (true/false), numeric (1-10), descriptive (free text), likert_scale" },
+              expected_result: { type: "string", description: "The desired outcome (e.g. 'true' for pass_fail, '8' for numeric)" },
+            },
+            required: ["name", "identifier", "text", "category", "expected_result"]
+          }
+        }
+      },
+      required: ["model_id", "evals"]
+    }
+  },
+  {
     name: "create_simulation_suite",
     description: "Create a simulation test suite for an assistant. A suite groups test cases that will be run against the agent.",
     input_schema: {
@@ -187,6 +240,18 @@ Actions are capabilities attached to assistants via the actions array. Each acti
 
 Example LIVE_TRANSFER action:
 {"type": "LIVE_TRANSFER", "name": "Transfer to Manager", "LIVE_TRANSFER": {"phone": "+11234567890", "instructions": "When user asks for a manager", "initiating_msg": "Let me connect you.", "transfer_mode": "warm_transfer"}}
+
+Information extractors pull structured data from conversations. Use add_info_extractors with subtypes:
+- YES_NO: binary extraction (e.g. "Is the customer interested in a demo?")
+- SINGLE_CHOICE: pick one from choices (e.g. department: Sales/Support/Billing)
+- OPEN_QUESTION: free-form text extraction with examples (e.g. "What is the customer's main issue?")
+
+Custom evaluations score call quality post-call. Use add_custom_evals with categories:
+- pass_fail: binary (expected_result: "true" or "false")
+- numeric: 1-10 score
+- descriptive: qualitative assessment
+- likert_scale: agreement-based scale
+Both tools automatically merge with the assistant's existing actions.
 
 Simulations let you test an assistant with AI-generated callers. Workflow:
 1. Create a simulation suite for the agent (create_simulation_suite)

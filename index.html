@@ -639,6 +639,44 @@ async function executeTool(name, input, traceId) {
         ...(input.custom_variables ? { custom_variables: input.custom_variables } : {}),
       }, traceId);
 
+    case "add_info_extractors": {
+      const current = await callSynthflow("GET", `/assistants/${input.model_id}`, null, traceId);
+      const existingActions = current.response?.actions || current.actions || [];
+      const newActions = input.extractors.map(e => {
+        const config = {};
+        config[e.subtype] = {
+          identifier: e.identifier,
+          description: e.description,
+          ...(e.choices ? { choices: e.choices } : {}),
+          ...(e.examples ? { examples: e.examples } : {}),
+        };
+        return { type: "INFORMATION_EXTRACTOR", name: e.name, INFORMATION_EXTRACTOR: config };
+      });
+      return callSynthflow("PUT", `/assistants/${input.model_id}`, {
+        actions: [...existingActions, ...newActions],
+      }, traceId);
+    }
+
+    case "add_custom_evals": {
+      const current = await callSynthflow("GET", `/assistants/${input.model_id}`, null, traceId);
+      const existingActions = current.response?.actions || current.actions || [];
+      const newActions = input.evals.map(e => ({
+        type: "CUSTOM_EVAL",
+        name: e.name,
+        CUSTOM_EVAL: {
+          question: {
+            identifier: e.identifier,
+            text: e.text,
+            category: e.category,
+            expected_result: e.expected_result,
+          }
+        }
+      }));
+      return callSynthflow("PUT", `/assistants/${input.model_id}`, {
+        actions: [...existingActions, ...newActions],
+      }, traceId);
+    }
+
     case "create_simulation_suite":
       return callSynthflow("POST", "/simulation_suites", {
         name: input.name,
