@@ -96,6 +96,75 @@ const TOOLS = [
       },
       required: ["model_id", "phone", "name"]
     }
+  },
+  {
+    name: "create_simulation_suite",
+    description: "Create a simulation test suite for an assistant. A suite groups test cases that will be run against the agent.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Name of the test suite" },
+        model_id: { type: "string", description: "The assistant's model_id to test" },
+        language: { type: "string", description: "Locale for the simulated caller (default: en-US). 'multi' is not allowed." },
+      },
+      required: ["name", "model_id"]
+    }
+  },
+  {
+    name: "create_simulation_case",
+    description: "Create a test case inside a simulation suite. Each case defines a caller persona/scenario and success criteria the agent must meet.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Test case name" },
+        prompt: { type: "string", description: "The simulated caller's persona and scenario description" },
+        type: { type: "string", enum: ["custom", "agent_based"], description: "Case type" },
+        success_criteria: {
+          type: "array",
+          items: { type: "string" },
+          description: "Criteria to evaluate whether the agent handled the call correctly"
+        },
+        call_success_type: { type: "string", enum: ["all", "any"], description: "'all' = every criterion must pass, 'any' = at least one" },
+        suite_id: { type: "string", description: "Suite to add this case to" },
+        base_agent_id: { type: "string", description: "The assistant's model_id this case tests" },
+      },
+      required: ["name", "prompt", "type", "success_criteria", "call_success_type", "suite_id", "base_agent_id"]
+    }
+  },
+  {
+    name: "list_simulation_cases",
+    description: "List simulation test cases for a suite or agent.",
+    input_schema: {
+      type: "object",
+      properties: {
+        suite_id: { type: "string", description: "Filter cases by suite ID" },
+        agent_id: { type: "string", description: "Filter cases by agent model_id (uses /by_agent endpoint)" },
+      }
+    }
+  },
+  {
+    name: "run_simulation",
+    description: "Execute all test cases in a simulation suite against the target agent. Returns a simulation_id to check results.",
+    input_schema: {
+      type: "object",
+      properties: {
+        suite_id: { type: "string", description: "The suite to execute" },
+        target_agent_id: { type: "string", description: "The assistant's model_id to run the simulation against (must match the suite's model_id)" },
+        max_turns: { type: "number", description: "Max conversation turns per simulation (10-50, default 20)" },
+      },
+      required: ["suite_id", "target_agent_id"]
+    }
+  },
+  {
+    name: "get_simulation_results",
+    description: "Get the results of a simulation run, including per-case pass/fail and conversation transcripts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        simulation_id: { type: "string", description: "The simulation run ID returned from run_simulation" },
+      },
+      required: ["simulation_id"]
+    }
   }
 ];
 
@@ -117,4 +186,12 @@ Actions are capabilities attached to assistants via the actions array. Each acti
 - CUSTOM_EVAL: Post-call eval. Config key: "CUSTOM_EVAL" with: question ({identifier, text, category: pass_fail|numeric|descriptive|likert_scale, expected_result})
 
 Example LIVE_TRANSFER action:
-{"type": "LIVE_TRANSFER", "name": "Transfer to Manager", "LIVE_TRANSFER": {"phone": "+11234567890", "instructions": "When user asks for a manager", "initiating_msg": "Let me connect you.", "transfer_mode": "warm_transfer"}}`;
+{"type": "LIVE_TRANSFER", "name": "Transfer to Manager", "LIVE_TRANSFER": {"phone": "+11234567890", "instructions": "When user asks for a manager", "initiating_msg": "Let me connect you.", "transfer_mode": "warm_transfer"}}
+
+Simulations let you test an assistant with AI-generated callers. Workflow:
+1. Create a simulation suite for the agent (create_simulation_suite)
+2. Add test cases — each case has a caller persona prompt and success criteria (create_simulation_case)
+3. Run the suite (run_simulation) — returns a simulation_id
+4. Check results (get_simulation_results)
+
+Each test case needs: a name, a prompt describing the simulated caller's persona/scenario, success_criteria (array of strings), and call_success_type ("all" or "any").`;

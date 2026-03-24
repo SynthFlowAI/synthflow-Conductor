@@ -639,6 +639,39 @@ async function executeTool(name, input, traceId) {
         ...(input.custom_variables ? { custom_variables: input.custom_variables } : {}),
       }, traceId);
 
+    case "create_simulation_suite":
+      return callSynthflow("POST", "/simulation_suites", {
+        name: input.name,
+        model_id: input.model_id,
+        ...(input.language ? { language: input.language } : {}),
+      }, traceId);
+
+    case "create_simulation_case":
+      return callSynthflow("POST", "/simulation_cases", {
+        name: input.name,
+        prompt: input.prompt,
+        type: input.type,
+        success_criteria: input.success_criteria,
+        call_success_type: input.call_success_type,
+        suite_id: input.suite_id,
+        base_agent_id: input.base_agent_id,
+      }, traceId);
+
+    case "list_simulation_cases": {
+      const path = input.agent_id
+        ? `/simulation_cases/by_agent?agent_id=${input.agent_id}`
+        : `/simulation_cases?suite_id=${input.suite_id}`;
+      return callSynthflow("GET", path, null, traceId);
+    }
+
+    case "run_simulation": {
+      const query = `?target_agent_id=${input.target_agent_id}${input.max_turns ? `&max_turns=${input.max_turns}` : ""}`;
+      return callSynthflow("POST", `/simulation_suites/${input.suite_id}/execute${query}`, null, traceId);
+    }
+
+    case "get_simulation_results":
+      return callSynthflow("GET", `/simulations/${input.simulation_id}`, null, traceId);
+
     default:
       return { error: `Unknown tool: ${name}` };
   }
