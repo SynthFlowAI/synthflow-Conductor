@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synthflow Voice AI Assistant</title>
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init('phc_dlyyp4oL77penk6jXtJRUUpotT7eiUk3wRSY1KzzpLi', {
+    api_host: 'https://eu.i.posthog.com',
+    person_profiles: 'identified_only',
+  });
+</script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #262626;
+    --text: #e5e5e5;
+    --muted: #737373;
+    --accent: #6366f1;
+    --accent-dim: #4338ca;
+    --tool-bg: #1a1625;
+    --tool-border: #2d2640;
+    --success: #22c55e;
+    --error: #ef4444;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 16px; font-weight: 600; }
+  header span { font-size: 12px; color: var(--muted); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .status-dot.connected { background: var(--success); }
+  .settings-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .settings-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── Key setup overlay ───────────────────────────────── */
+  #setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #setup-overlay.hidden { display: none; }
+  .setup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+  }
+  .setup-card h2 { font-size: 18px; margin-bottom: 4px; }
+  .setup-card .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: monospace;
+    outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: #444; }
+  .field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .setup-actions { display: flex; gap: 8px; margin-top: 24px; }
+  .setup-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dim); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-secondary:hover { border-color: var(--accent) !important; }
+  .setup-error { color: var(--error); font-size: 12px; margin-top: 8px; display: none; }
+
+  /* ── Chat ─────────────────────────────────────────────── */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .msg {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  .msg.user {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .msg.assistant { padding: 4px 0; }
+  .msg.assistant p { margin-bottom: 8px; }
+  .msg.assistant code {
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .msg.assistant pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+
+  .tool-call {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    background: var(--tool-bg);
+    border: 1px solid var(--tool-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .tool-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-header:hover { background: rgba(99,102,241,0.06); }
+  .tool-header .arrow { transition: transform 0.2s; font-size: 10px; }
+  .tool-header .arrow.open { transform: rotate(90deg); }
+  .tool-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-left: auto;
+  }
+  .tool-badge.running { background: rgba(99,102,241,0.15); color: var(--accent); }
+  .tool-badge.done { background: rgba(34,197,94,0.15); color: var(--success); }
+  .tool-badge.error { background: rgba(239,68,68,0.15); color: var(--error); }
+  .tool-body {
+    display: none;
+    padding: 0 14px 12px;
+    font-size: 13px;
+  }
+  .tool-body.open { display: block; }
+  .tool-body pre {
+    background: var(--bg);
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-top: 6px;
+    color: var(--muted);
+  }
+  .tool-body label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+    margin-bottom: 2px;
+  }
+
+  #input-area {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+  }
+  #input-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+  }
+  #input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    min-height: 44px;
+    max-height: 120px;
+  }
+  #input:focus { border-color: var(--accent); }
+  #input::placeholder { color: var(--muted); }
+  #send {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #send:hover { background: var(--accent-dim); }
+  #send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .typing { color: var(--muted); font-style: italic; font-size: 13px; }
+
+  .examples {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 40px 0;
+  }
+  .examples button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .examples button:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Key setup overlay -->
+<div id="setup-overlay">
+  <div class="setup-card">
+    <h2>Connect your API keys</h2>
+    <p class="subtitle">Keys are stored in your browser only and sent per-request through a secure proxy. They are never persisted server-side.</p>
+    <div class="field">
+      <label>Anthropic API Key</label>
+      <input type="password" id="key-anthropic" placeholder="sk-ant-..." autocomplete="off">
+      <div class="hint">Powers the Claude assistant. Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
+    </div>
+    <div class="field">
+      <label>Synthflow API Key</label>
+      <input type="password" id="key-synthflow" placeholder="sk_..." autocomplete="off">
+      <div class="hint">Used to create assistants, calls, and actions. Get one at <a href="https://app.synthflow.ai" target="_blank" style="color:var(--accent)">app.synthflow.ai</a></div>
+    </div>
+    <div class="setup-error" id="setup-error"></div>
+    <div class="setup-actions">
+      <button class="btn-primary" id="setup-save" onclick="saveKeys()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="status-dot" id="status-dot"></div>
+  <h1>Synthflow Assistant</h1>
+  <span>Voice AI builder powered by Claude</span>
+  <button class="settings-btn" onclick="showSetup()">API Keys</button>
+</header>
+
+<div id="chat">
+  <div class="examples">
+    <button onclick="sendExample(this)">Create an inbound support agent</button>
+    <button onclick="sendExample(this)">Make an outbound call to +1234567890</button>
+    <button onclick="sendExample(this)">Add a live transfer action to my assistant</button>
+    <button onclick="sendExample(this)">Set up an SMS action that sends booking confirmations</button>
+    <button onclick="sendExample(this)">List my assistants</button>
+  </div>
+</div>
+
+<div id="input-area">
+  <div id="input-wrap">
+    <textarea id="input" rows="1" placeholder="Ask me to build voice AI with Synthflow..."
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+    <button id="send" onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────
+// Point this at your Cloudflare Worker URL
+const WORKER_URL = "https://synthflow-proxy.YOUR_SUBDOMAIN.workers.dev";
+
+// ── Key management ──────────────────────────────────────────────────
+function getKeys() {
+  return {
+    anthropic: sessionStorage.getItem("anthropic_key") || "",
+    synthflow: sessionStorage.getItem("synthflow_key") || "",
+  };
+}
+
+function hasKeys() {
+  const k = getKeys();
+  return k.anthropic.length > 0 && k.synthflow.length > 0;
+}
+
+function saveKeys() {
+  const ak = document.getElementById("key-anthropic").value.trim();
+  const sk = document.getElementById("key-synthflow").value.trim();
+  const err = document.getElementById("setup-error");
+
+  if (!ak || !sk) {
+    err.textContent = "Both keys are required.";
+    err.style.display = "block";
+    return;
+  }
+
+  sessionStorage.setItem("anthropic_key", ak);
+  sessionStorage.setItem("synthflow_key", sk);
+  posthog.capture("keys_configured");
+  hideSetup();
+}
+
+function showSetup() {
+  const k = getKeys();
+  document.getElementById("key-anthropic").value = k.anthropic;
+  document.getElementById("key-synthflow").value = k.synthflow;
+  document.getElementById("setup-error").style.display = "none";
+  document.getElementById("setup-overlay").classList.remove("hidden");
+}
+
+function hideSetup() {
+  document.getElementById("setup-overlay").classList.add("hidden");
+  updateStatus();
+}
+
+function updateStatus() {
+  const dot = document.getElementById("status-dot");
+  dot.classList.toggle("connected", hasKeys());
+}
+
+// Show setup on load if no keys
+if (hasKeys()) {
+  document.getElementById("setup-overlay").classList.add("hidden");
+}
+updateStatus();
+
+// ── Synthflow tool definitions ──────────────────────────────────────
+const TOOLS = [
+  {
+    name: "create_assistant",
+    description: "Create a new Synthflow voice AI assistant. Returns the created assistant object with its model_id.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Display name for the assistant" },
+        type: { type: "string", enum: ["inbound", "outbound", "widget"], description: "Call direction type" },
+        agent: {
+          type: "object",
+          description: "Agent configuration",
+          properties: {
+            prompt: { type: "string", description: "System prompt defining assistant behavior" },
+            language: { type: "string", description: "Language code, e.g. en-US" },
+            llm: { type: "string", enum: ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet", "claude-3-5-haiku"], description: "LLM to use" },
+            greeting_message: { type: "string", description: "First message the assistant says" },
+          }
+        }
+      },
+      required: ["name", "type"]
+    }
+  },
+  {
+    name: "list_assistants",
+    description: "List existing Synthflow assistants. Returns an array of assistant objects.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Maximum number of results to return (default 20)" }
+      }
+    }
+  },
+  {
+    name: "create_call",
+    description: "Initiate an outbound phone call through a Synthflow assistant.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "The assistant's model_id to place the call" },
+        phone_number: { type: "string", description: "Destination phone number in E.164 format" },
+        name: { type: "string", description: "Name of the person being called (used in conversation)" },
+        custom_variables: {
+          type: "object",
+          description: "Key-value pairs injected into the assistant prompt as {{variable_name}}"
+        }
+      },
+      required: ["model_id", "phone_number"]
+    }
+  },
+  {
+    name: "create_action",
+    description: "Create an action that an assistant can perform during calls. Action types: LIVE_TRANSFER (transfer to human), SEND_SMS (text messages), CUSTOM_ACTION (webhook/HTTP), INFORMATION_EXTRACTOR (extract data), REAL_TIME_BOOKING (calendar booking), CUSTOM_EVAL (score calls).",
+    input_schema: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["LIVE_TRANSFER", "SEND_SMS", "CUSTOM_ACTION", "INFORMATION_EXTRACTOR", "REAL_TIME_BOOKING", "CUSTOM_EVAL"],
+          description: "The type of action"
+        },
+        name: { type: "string", description: "Descriptive name for this action" },
+        description: { type: "string", description: "When should the assistant trigger this action" },
+        config: { type: "object", description: "Type-specific configuration (transfer number, SMS content, webhook URL, etc.)" }
+      },
+      required: ["type", "name"]
+    }
+  },
+  {
+    name: "attach_action",
+    description: "Attach an existing action to an assistant so it can use it during calls.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "The assistant's model_id" },
+        action_id: { type: "string", description: "The action ID to attach" }
+      },
+      required: ["model_id", "action_id"]
+    }
+  }
+];
+
+const SYSTEM_PROMPT = `You are a Synthflow voice AI assistant builder. You help users create and configure voice AI assistants, make calls, and set up actions using the Synthflow platform.
+
+When the user asks you to create something, use the appropriate tool. Be conversational and helpful. After creating resources, summarize what was created and suggest next steps.
+
+Key concepts:
+- Assistants have a model_id used to reference them in API calls
+- Actions are capabilities attached to assistants (transfers, SMS, webhooks, etc.)
+- Calls require a model_id and a phone number in E.164 format (+1...)
+- Custom variables can be injected into assistant prompts using {{variable_name}} syntax`;
+
+// ── State ───────────────────────────────────────────────────────────
+let messages = [];
+let busy = false;
+
+// ── DOM helpers ─────────────────────────────────────────────────────
+const $chat = document.getElementById("chat");
+const $input = document.getElementById("input");
+const $send = document.getElementById("send");
+
+function scrollDown() {
+  requestAnimationFrame(() => $chat.scrollTo(0, $chat.scrollHeight));
+}
+
+function addMsg(role, html) {
+  const d = document.createElement("div");
+  d.className = `msg ${role}`;
+  d.innerHTML = html;
+  $chat.appendChild(d);
+  scrollDown();
+  return d;
+}
+
+function addToolCall(name, input, status = "running") {
+  const id = "tool-" + Math.random().toString(36).slice(2, 8);
+  const d = document.createElement("div");
+  d.className = "tool-call";
+  d.id = id;
+  d.innerHTML = `
+    <div class="tool-header" onclick="toggleTool('${id}')">
+      <span class="arrow" id="${id}-arrow">&#9654;</span>
+      <span>${formatToolName(name)}</span>
+      <span class="tool-badge ${status}" id="${id}-badge">${status === "running" ? "running..." : status}</span>
+    </div>
+    <div class="tool-body" id="${id}-body">
+      <label>Input</label>
+      <pre>${JSON.stringify(input, null, 2)}</pre>
+      <div id="${id}-result"></div>
+    </div>`;
+  $chat.appendChild(d);
+  scrollDown();
+  return id;
+}
+
+function updateToolCall(id, status, result) {
+  const badge = document.getElementById(id + "-badge");
+  const resultEl = document.getElementById(id + "-result");
+  if (badge) {
+    badge.textContent = status === "done" ? "complete" : status;
+    badge.className = `tool-badge ${status}`;
+  }
+  if (resultEl && result) {
+    resultEl.innerHTML = `<label>Result</label><pre>${JSON.stringify(result, null, 2)}</pre>`;
+  }
+}
+
+function toggleTool(id) {
+  const body = document.getElementById(id + "-body");
+  const arrow = document.getElementById(id + "-arrow");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+function formatToolName(name) {
+  return name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function markdownish(text) {
+  return text
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre>$2</pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+}
+
+// ── API calls (keys sent per-request via headers) ───────────────────
+async function callClaude(msgs) {
+  const keys = getKeys();
+  const res = await fetch(`${WORKER_URL}/api/claude`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-anthropic-key": keys.anthropic,
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT,
+      tools: TOOLS,
+      messages: msgs,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 401) {
+      showSetup();
+      throw new Error("Invalid Anthropic API key. Please check your key and try again.");
+    }
+    throw new Error(`Claude API error: ${res.status} — ${body.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+async function callSynthflow(method, path, payload) {
+  const keys = getKeys();
+  const res = await fetch(`${WORKER_URL}/api/synthflow`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-synthflow-key": keys.synthflow,
+    },
+    body: JSON.stringify({ method, path, payload }),
+  });
+  if (res.status === 401) {
+    showSetup();
+    throw new Error("Invalid Synthflow API key. Please check your key and try again.");
+  }
+  return res.json();
+}
+
+// ── Tool execution ──────────────────────────────────────────────────
+async function executeTool(name, input) {
+  switch (name) {
+    case "create_assistant":
+      return callSynthflow("POST", "/assistants", {
+        name: input.name,
+        type: input.type || "inbound",
+        ...(input.agent ? { agent: input.agent } : {}),
+      });
+
+    case "list_assistants":
+      return callSynthflow("GET", `/assistants?limit=${input.limit || 20}`);
+
+    case "create_call":
+      return callSynthflow("POST", "/calls", {
+        model_id: input.model_id,
+        phone_number: input.phone_number,
+        ...(input.name ? { name: input.name } : {}),
+        ...(input.custom_variables ? { custom_variables: input.custom_variables } : {}),
+      });
+
+    case "create_action":
+      return callSynthflow("POST", "/actions", {
+        type: input.type,
+        name: input.name,
+        ...(input.description ? { description: input.description } : {}),
+        ...(input.config ? { ...input.config } : {}),
+      });
+
+    case "attach_action":
+      return callSynthflow("POST", `/assistants/${input.model_id}/actions`, {
+        action_id: input.action_id,
+      });
+
+    default:
+      return { error: `Unknown tool: ${name}` };
+  }
+}
+
+// ── Agentic loop ────────────────────────────────────────────────────
+async function agentLoop(response) {
+  while (response.stop_reason === "tool_use") {
+    let assistantText = "";
+    const toolUses = [];
+
+    for (const block of response.content) {
+      if (block.type === "text" && block.text.trim()) {
+        assistantText += block.text;
+      }
+      if (block.type === "tool_use") {
+        toolUses.push(block);
+      }
+    }
+
+    if (assistantText) {
+      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`);
+    }
+
+    messages.push({ role: "assistant", content: response.content });
+
+    const toolResults = [];
+    for (const tool of toolUses) {
+      const uiId = addToolCall(tool.name, tool.input);
+
+      let result;
+      try {
+        result = await executeTool(tool.name, tool.input);
+        updateToolCall(uiId, "done", result);
+        posthog.capture("tool_executed", { tool: tool.name, status: "success" });
+      } catch (e) {
+        result = { error: e.message };
+        updateToolCall(uiId, "error", result);
+        posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message });
+      }
+
+      toolResults.push({
+        type: "tool_result",
+        tool_use_id: tool.id,
+        content: JSON.stringify(result),
+      });
+    }
+
+    messages.push({ role: "user", content: toolResults });
+    response = await callClaude(messages);
+  }
+
+  const finalText = response.content
+    .filter(b => b.type === "text")
+    .map(b => b.text)
+    .join("");
+
+  if (finalText.trim()) {
+    addMsg("assistant", `<p>${markdownish(finalText)}</p>`);
+  }
+
+  messages.push({ role: "assistant", content: response.content });
+}
+
+// ── Send message ────────────────────────────────────────────────────
+async function send() {
+  const text = $input.value.trim();
+  if (!text || busy) return;
+
+  if (!hasKeys()) {
+    showSetup();
+    return;
+  }
+
+  const examples = $chat.querySelector(".examples");
+  if (examples) examples.remove();
+
+  busy = true;
+  $send.disabled = true;
+  $input.value = "";
+  $input.style.height = "auto";
+
+  addMsg("user", escapeHtml(text));
+  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length });
+
+  const typing = addMsg("assistant", '<span class="typing">Thinking...</span>');
+
+  messages.push({ role: "user", content: text });
+
+  try {
+    const response = await callClaude(messages);
+    typing.remove();
+    await agentLoop(response);
+  } catch (e) {
+    typing.remove();
+    addMsg("assistant", `<p style="color:var(--error)">Error: ${escapeHtml(e.message)}</p>`);
+    posthog.capture("conversation_error", { error: e.message });
+    messages.pop();
+  }
+
+  busy = false;
+  $send.disabled = false;
+  $input.focus();
+}
+
+function sendExample(btn) {
+  $input.value = btn.textContent;
+  send();
+}
+
+// Auto-resize textarea
+$input.addEventListener("input", () => {
+  $input.style.height = "auto";
+  $input.style.height = Math.min($input.scrollHeight, 120) + "px";
+});
+</script>
+</body>
+</html>
