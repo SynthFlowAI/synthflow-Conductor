@@ -263,6 +263,25 @@
 
   .typing { color: var(--muted); font-style: italic; font-size: 13px; }
 
+  .feedback {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .feedback button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.15s;
+  }
+  .feedback button:hover { border-color: var(--accent); background: var(--surface); }
+  .feedback button.active { border-color: var(--accent); background: rgba(99,102,241,0.15); }
+  .feedback button:disabled { opacity: 0.4; cursor: default; }
+
   .examples {
     max-width: 720px;
     margin: 0 auto;
@@ -489,13 +508,36 @@ function scrollDown() {
   requestAnimationFrame(() => $chat.scrollTo(0, $chat.scrollHeight));
 }
 
-function addMsg(role, html) {
+const SURVEY_ID = "019d1f98-83b6-0000-7bae-b269a2a30d9e";
+
+function addMsg(role, html, traceId) {
   const d = document.createElement("div");
   d.className = `msg ${role}`;
   d.innerHTML = html;
+  if (role === "assistant" && traceId) {
+    const fb = document.createElement("div");
+    fb.className = "feedback";
+    fb.innerHTML = `<button onclick="submitFeedback(this,'up','${traceId}')">&#x1F44D;</button><button onclick="submitFeedback(this,'down','${traceId}')">&#x1F44E;</button>`;
+    d.appendChild(fb);
+  }
   $chat.appendChild(d);
   scrollDown();
   return d;
+}
+
+function submitFeedback(btn, vote, traceId) {
+  const fb = btn.parentElement;
+  fb.querySelectorAll("button").forEach(b => {
+    b.classList.remove("active");
+    b.disabled = true;
+  });
+  btn.classList.add("active");
+  btn.disabled = false;
+  posthog.capture("survey sent", {
+    $survey_id: SURVEY_ID,
+    $survey_response: vote,
+    $ai_trace_id: traceId,
+  });
 }
 
 function addToolCall(name, input, status = "running") {
@@ -654,13 +696,13 @@ async function agentLoop(response) {
       }
     }
 
+    const traceId = response.id;
+
     if (assistantText) {
-      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`);
+      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`, traceId);
     }
 
     messages.push({ role: "assistant", content: response.content });
-
-    const traceId = response.id;
     const toolResults = [];
     for (const tool of toolUses) {
       const uiId = addToolCall(tool.name, tool.input);
@@ -693,7 +735,7 @@ async function agentLoop(response) {
     .join("");
 
   if (finalText.trim()) {
-    addMsg("assistant", `<p>${markdownish(finalText)}</p>`);
+    addMsg("assistant", `<p>${markdownish(finalText)}</p>`, response.id);
   }
 
   messages.push({ role: "assistant", content: response.content });
