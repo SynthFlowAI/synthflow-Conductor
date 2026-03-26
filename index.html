@@ -1037,6 +1037,35 @@ function showChat() {
   $chat.classList.remove("hidden");
 }
 
+function sanitizeMessages(msgs) {
+  const cleaned = [];
+  for (let i = 0; i < msgs.length; i++) {
+    const msg = msgs[i];
+    if (msg.role === "assistant" && Array.isArray(msg.content)) {
+      const toolUseIds = msg.content.filter(b => b.type === "tool_use").map(b => b.id);
+      if (toolUseIds.length > 0) {
+        // Check if next message has matching tool_results
+        const next = msgs[i + 1];
+        const resolvedIds = new Set();
+        if (next && next.role === "user" && Array.isArray(next.content)) {
+          next.content.filter(b => b.type === "tool_result").forEach(b => resolvedIds.add(b.tool_use_id));
+        }
+        const unresolvedIds = toolUseIds.filter(id => !resolvedIds.has(id));
+        if (unresolvedIds.length > 0) {
+          const unresolvedSet = new Set(unresolvedIds);
+          const filteredContent = msg.content.filter(b => !(b.type === "tool_use" && unresolvedSet.has(b.id)));
+          if (filteredContent.length > 0) {
+            cleaned.push({ ...msg, content: filteredContent });
+          }
+          continue;
+        }
+      }
+    }
+    cleaned.push(msg);
+  }
+  return cleaned;
+}
+
 async function send() {
   const text = $input.value.trim();
   if (!text || busy) return;
@@ -1060,6 +1089,7 @@ async function send() {
 
   showThinking();
   messages.push({ role: "user", content: text });
+  messages = sanitizeMessages(messages);
 
   try {
     await agentLoop(messageTraceId);
