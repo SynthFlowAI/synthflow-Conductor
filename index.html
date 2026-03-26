@@ -194,7 +194,17 @@
     font-weight: 500;
     margin-left: auto;
   }
-  .tool-badge.running { background: rgba(16,163,127,0.15); color: var(--accent); }
+  .tool-badge.running { background: rgba(16,163,127,0.15); color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .tool-badge.running::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .tool-badge.done { background: rgba(16,163,127,0.15); color: var(--success); }
   .tool-badge.error { background: rgba(239,68,68,0.15); color: var(--error); }
   .tool-body {
@@ -296,6 +306,39 @@
   #send svg { width: 18px; height: 18px; }
 
   .typing { color: var(--muted); font-style: italic; font-size: 14px; }
+
+  /* ── Streaming & loading animations ────────────────── */
+  .thinking-dots {
+    display: flex;
+    gap: 5px;
+    padding: 4px 0;
+  }
+  .thinking-dots span {
+    width: 8px;
+    height: 8px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: dot-pulse 1.4s ease-in-out infinite;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot-pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+  .streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--accent);
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    animation: cursor-blink 0.7s step-end infinite;
+  }
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
 
   /* ── Welcome screen ─────────────────────────────────────── */
   #welcome {
@@ -555,8 +598,8 @@ function markdownish(text) {
     .replace(/\n/g, '<br>');
 }
 
-// ── API calls ───────────────────────────────────────────────────────
-async function callClaude(msgs, traceId) {
+// ── Streaming API call ──────────────────────────────────────────────
+async function* streamClaude(msgs, traceId) {
   const res = await fetch(`${WORKER_URL}/api/claude`, {
     method: "POST",
     headers: {
@@ -571,6 +614,7 @@ async function callClaude(msgs, traceId) {
       system: SYSTEM_PROMPT,
       tools: TOOLS,
       messages: msgs,
+      stream: true,
     }),
   });
   if (!res.ok) {
@@ -581,7 +625,24 @@ async function callClaude(msgs, traceId) {
     }
     throw new Error(`API error: ${res.status} — ${body.slice(0, 200)}`);
   }
-  return res.json();
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.slice(6).trim();
+        if (data && data !== "[DONE]") {
+          try { yield JSON.parse(data); } catch {}
+        }
+      }
+    }
+  }
 }
 
 async function callSynthflow(method, path, payload, traceId) {
@@ -820,30 +881,116 @@ async function executeTool(name, input, traceId) {
   }
 }
 
+// ── Streaming helpers ────────────────────────────────────────────────
+function showThinking() {
+  removeThinking();
+  const el = document.createElement("div");
+  el.id = "thinking-indicator";
+  el.className = "msg-row";
+  el.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">S</div><div class="msg-content"><div class="thinking-dots"><span></span><span></span><span></span></div></div></div>`;
+  $chat.appendChild(el);
+  scrollDown();
+}
+
+function removeThinking() {
+  const el = document.getElementById("thinking-indicator");
+  if (el) el.remove();
+}
+
+function addStreamingMsg() {
+  const row = document.createElement("div");
+  row.className = "msg-row";
+  row.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">S</div><div class="msg-content"><p></p></div></div>`;
+  $chat.appendChild(row);
+  scrollDown();
+  return row;
+}
+
+function updateStreamingMsg(row, text) {
+  const content = row.querySelector(".msg-content");
+  content.innerHTML = `<p>${markdownish(text)}<span class="streaming-cursor"></span></p>`;
+  scrollDown();
+}
+
+function finalizeStreamingMsg(row, text, traceId) {
+  const content = row.querySelector(".msg-content");
+  let feedbackHtml = "";
+  if (traceId) {
+    feedbackHtml = `<div class="feedback"><button onclick="submitFeedback(this,'up','${traceId}')">&#x1F44D;</button><button onclick="submitFeedback(this,'down','${traceId}')">&#x1F44E;</button></div>`;
+  }
+  content.innerHTML = `<p>${markdownish(text)}</p>${feedbackHtml}`;
+}
+
+// ── Stream processing ────────────────────────────────────────────────
+async function processStream(msgs, traceId) {
+  let message = null;
+  const contentBlocks = [];
+  let currentBlock = null;
+  let msgRow = null;
+  let streamedText = "";
+  let thinkingRemoved = false;
+
+  for await (const event of streamClaude(msgs, traceId)) {
+    if (!thinkingRemoved) {
+      removeThinking();
+      thinkingRemoved = true;
+    }
+    switch (event.type) {
+      case "message_start":
+        message = event.message;
+        break;
+      case "content_block_start":
+        currentBlock = { ...event.content_block };
+        if (currentBlock.type === "text") {
+          currentBlock.text = "";
+          if (!msgRow) msgRow = addStreamingMsg();
+        } else if (currentBlock.type === "tool_use") {
+          currentBlock._json = "";
+        }
+        break;
+      case "content_block_delta":
+        if (event.delta?.type === "text_delta" && currentBlock) {
+          currentBlock.text += event.delta.text;
+          streamedText += event.delta.text;
+          updateStreamingMsg(msgRow, streamedText);
+        } else if (event.delta?.type === "input_json_delta" && currentBlock) {
+          currentBlock._json += event.delta.partial_json;
+        }
+        break;
+      case "content_block_stop":
+        if (currentBlock?.type === "tool_use" && currentBlock._json) {
+          try { currentBlock.input = JSON.parse(currentBlock._json); } catch {}
+          delete currentBlock._json;
+        }
+        contentBlocks.push(currentBlock);
+        currentBlock = null;
+        break;
+      case "message_delta":
+        if (message && event.delta) Object.assign(message, event.delta);
+        if (event.usage && message) message.usage = { ...message.usage, ...event.usage };
+        break;
+    }
+  }
+
+  if (!thinkingRemoved) removeThinking();
+  if (message) message.content = contentBlocks;
+  if (msgRow && streamedText) finalizeStreamingMsg(msgRow, streamedText, traceId);
+  return message;
+}
+
 // ── Agentic loop ────────────────────────────────────────────────────
-async function agentLoop(response, traceId) {
-  while (response.stop_reason === "tool_use") {
-    let assistantText = "";
-    const toolUses = [];
+async function agentLoop(traceId) {
+  while (true) {
+    const message = await processStream(messages, traceId);
+    if (!message || !message.content) break;
+    messages.push({ role: "assistant", content: message.content });
 
-    for (const block of response.content) {
-      if (block.type === "text" && block.text.trim()) {
-        assistantText += block.text;
-      }
-      if (block.type === "tool_use") {
-        toolUses.push(block);
-      }
-    }
+    if (message.stop_reason !== "tool_use") break;
 
-    if (assistantText) {
-      addMsg("assistant", `<p>${markdownish(assistantText)}</p>`, traceId);
-    }
-
-    messages.push({ role: "assistant", content: response.content });
+    const toolUses = message.content.filter(b => b.type === "tool_use");
     const toolResults = [];
     for (const tool of toolUses) {
       const uiId = addToolCall(tool.name, tool.input);
-
       let result;
       try {
         result = await executeTool(tool.name, tool.input, traceId);
@@ -854,7 +1001,6 @@ async function agentLoop(response, traceId) {
         updateToolCall(uiId, "error", result);
         posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: traceId, $ai_session_id: conversationSessionId });
       }
-
       toolResults.push({
         type: "tool_result",
         tool_use_id: tool.id,
@@ -863,19 +1009,8 @@ async function agentLoop(response, traceId) {
     }
 
     messages.push({ role: "user", content: toolResults });
-    response = await callClaude(messages, traceId);
+    showThinking();
   }
-
-  const finalText = response.content
-    .filter(b => b.type === "text")
-    .map(b => b.text)
-    .join("");
-
-  if (finalText.trim()) {
-    addMsg("assistant", `<p>${markdownish(finalText)}</p>`, traceId);
-  }
-
-  messages.push({ role: "assistant", content: response.content });
 }
 
 // ── Send message ────────────────────────────────────────────────────
@@ -905,16 +1040,13 @@ async function send() {
   addMsg("user", escapeHtml(text));
   posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
 
-  const typing = addMsg("assistant", '<span class="typing">Thinking...</span>');
-
+  showThinking();
   messages.push({ role: "user", content: text });
 
   try {
-    const response = await callClaude(messages, messageTraceId);
-    typing.remove();
-    await agentLoop(response, messageTraceId);
+    await agentLoop(messageTraceId);
   } catch (e) {
-    typing.remove();
+    removeThinking();
     addMsg("assistant", `<p style="color:var(--error)">Error: ${escapeHtml(e.message)}</p>`);
     posthog.capture("conversation_error", { error: e.message, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
     messages.pop();
