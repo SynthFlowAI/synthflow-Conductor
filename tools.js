@@ -398,12 +398,12 @@ const TOOLS = [
   // ── Standalone Actions ───────────────────────────────────────────────
   {
     name: "create_action",
-    description: "Create a standalone action. Pass action_type and a config object with type-specific fields. CUSTOM_ACTION config: {name, description, method, url, headers?, body?, variables?}. LIVE_TRANSFER config: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}. SEND_SMS config: {name, to_phone_number, message, from_phone_number?}. REAL_TIME_BOOKING config: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}. INFORMATION_EXTRACTOR config: {name, fields: [{name, type, required, description}]}. CUSTOM_EVAL config: {name, criteria: [{name, description, type}]}.",
+    description: "Create a standalone action. Pass action_type and a config object with type-specific fields. CUSTOM_ACTION config: {name, url, http_mode (GET/POST/PUT/DELETE), description?, headers?, body?, variables?, run_action_before_call_start?}. LIVE_TRANSFER config: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}. SEND_SMS config: {name, to_phone_number, message, from_phone_number?}. REAL_TIME_BOOKING config: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}. INFORMATION_EXTRACTOR config: {name, fields: [{name, type, required, description}]}. CUSTOM_EVAL config: {name, criteria: [{name, description, type}]}.",
     input_schema: {
       type: "object",
       properties: {
         action_type: { type: "string", enum: ["CUSTOM_ACTION", "LIVE_TRANSFER", "SEND_SMS", "REAL_TIME_BOOKING", "INFORMATION_EXTRACTOR", "CUSTOM_EVAL"], description: "Action type (uppercase)" },
-        config: { type: "object", description: "Flat configuration fields (do NOT nest under action_type key). Example for CUSTOM_ACTION: {\"name\": \"My Action\", \"description\": \"...\", \"method\": \"POST\", \"url\": \"https://...\"}" },
+        config: { type: "object", description: "Flat configuration fields (do NOT nest under action_type key). Example for CUSTOM_ACTION: {\"name\": \"My Action\", \"url\": \"https://...\", \"http_mode\": \"POST\"}" },
       },
       required: ["action_type", "config"]
     }
@@ -501,13 +501,13 @@ The agent will search the KB during calls when relevant. To inspect a KB, use li
 Standalone actions are reusable integrations that can be shared across multiple assistants. These are different from inline actions on create_assistant/update_assistant — standalone actions are managed separately.
 The create_action API uses a nested payload: { "ACTION_TYPE": { ...config } }. The action_type becomes the top-level key.
 Types and their config fields:
-- CUSTOM_ACTION: {name, description, method, url, headers?, body?, variables?: [{key, description, type, required}]}
+- CUSTOM_ACTION: {name, url, http_mode (GET/POST/PUT/DELETE), description?, headers?, body?, variables?: [{key, description, type, required}], run_action_before_call_start?}
 - LIVE_TRANSFER: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}
 - SEND_SMS: {name, to_phone_number, message, from_phone_number?}
 - REAL_TIME_BOOKING: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}
 - INFORMATION_EXTRACTOR: {name, fields: [{name, type, required, description}]}
 - CUSTOM_EVAL: {name, criteria: [{name, description, type}]}
-Example: action_type="CUSTOM_ACTION", config={"name": "Create Lead", "description": "Creates a CRM lead", "method": "POST", "url": "https://api.crm.com/leads"}
+Example: action_type="CUSTOM_ACTION", config={"name": "Create Lead", "url": "https://api.crm.com/leads", "http_mode": "POST"}
 Workflow: create_action, then manage_action_agents (action: "attach") to connect to assistants. Use list_actions to see existing actions.
 
 Calls can be listed and inspected after they happen:
