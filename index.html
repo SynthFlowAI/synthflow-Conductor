@@ -619,8 +619,29 @@ async function executeTool(name, input, traceId) {
       return callSynthflow("POST", "/assistants", payload, traceId);
     }
 
-    case "list_assistants":
-      return callSynthflow("GET", `/assistants?limit=${input.limit || 20}`, null, traceId);
+    case "list_assistants": {
+      const result = await callSynthflow("GET", `/assistants?limit=${input.limit || 10}`, null, traceId);
+      // Trim verbose fields to prevent context explosion
+      if (result?.response?.assistants) {
+        result.response.assistants = result.response.assistants.map(a => ({
+          model_id: a.model_id,
+          name: a.name,
+          type: a.type,
+          phone_number: a.phone_number,
+          is_recording: a.is_recording,
+          description: a.description,
+          agent_summary: a.agent ? {
+            llm: a.agent.llm,
+            language: a.agent.language,
+            voice_name: a.agent.voice_name,
+            greeting_message: a.agent.greeting_message,
+          } : null,
+          actions_count: Array.isArray(a.actions) ? a.actions.length : 0,
+          created_at: a.created_at,
+        }));
+      }
+      return result;
+    }
 
     case "update_assistant": {
       const { model_id, ...fields } = input;
