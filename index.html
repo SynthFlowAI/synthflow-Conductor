@@ -907,10 +907,8 @@ async function executeTool(name, input, traceId) {
 
     // ── Standalone Actions ─────────────────────────────────────────
     case "create_action": {
-      const { name, action_type, ...fields } = input;
-      const payload = { name, action_type };
-      Object.entries(fields).forEach(([k, v]) => { if (v != null) payload[k] = v; });
-      return callSynthflow("POST", "/actions", payload, traceId);
+      const { action_type, config } = input;
+      return callSynthflow("POST", "/actions", { [action_type]: config }, traceId);
     }
 
     case "list_actions": {

@@ -398,22 +398,14 @@ const TOOLS = [
   // ── Standalone Actions ───────────────────────────────────────────────
   {
     name: "create_action",
-    description: "Create a standalone action. For 'custom': provide webhook_url, method, optional headers/payload_template. For 'calcom_booking': provide api_key, event_type_id, optional calendar_id. For 'ghl_booking': provide api_key, calendar_id, optional location_id.",
+    description: "Create a standalone action. Pass action_type and a config object with type-specific fields. CUSTOM_ACTION config: {name, description, method, url, headers?, body?, variables?}. LIVE_TRANSFER config: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}. SEND_SMS config: {name, to_phone_number, message, from_phone_number?}. REAL_TIME_BOOKING config: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}. INFORMATION_EXTRACTOR config: {name, fields: [{name, type, required, description}]}. CUSTOM_EVAL config: {name, criteria: [{name, description, type}]}.",
     input_schema: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Action name" },
-        action_type: { type: "string", enum: ["custom", "calcom_booking", "ghl_booking"], description: "Action type" },
-        webhook_url: { type: "string", description: "Webhook URL (custom)" },
-        method: { type: "string", description: "HTTP method (custom, e.g. POST)" },
-        headers: { type: "object", description: "Request headers (custom, optional)" },
-        payload_template: { type: "string", description: "Payload template with {{variable}} placeholders (custom, optional)" },
-        api_key: { type: "string", description: "API key (calcom_booking / ghl_booking)" },
-        event_type_id: { type: "string", description: "Cal.com event type ID (calcom_booking)" },
-        calendar_id: { type: "string", description: "Calendar ID (calcom_booking optional, ghl_booking required)" },
-        location_id: { type: "string", description: "GHL location ID (ghl_booking, optional)" },
+        action_type: { type: "string", enum: ["CUSTOM_ACTION", "LIVE_TRANSFER", "SEND_SMS", "REAL_TIME_BOOKING", "INFORMATION_EXTRACTOR", "CUSTOM_EVAL"], description: "Action type (uppercase)" },
+        config: { type: "object", description: "Type-specific configuration object. All types require 'name' inside config." },
       },
-      required: ["name", "action_type"]
+      required: ["action_type", "config"]
     }
   },
   {
@@ -507,10 +499,15 @@ Workflow:
 The agent will search the KB during calls when relevant. To inspect a KB, use list_knowledge_base_sources. To disconnect, use manage_knowledge_base_agent with action: "detach".
 
 Standalone actions are reusable integrations that can be shared across multiple assistants. These are different from inline actions on create_assistant/update_assistant — standalone actions are managed separately.
-Types:
-- custom: HTTP webhook — provide webhook_url, method, optional headers and payload_template with {{variable}} placeholders
-- calcom_booking: Cal.com scheduling — provide api_key, event_type_id, optional calendar_id
-- ghl_booking: GoHighLevel booking — provide api_key, calendar_id, optional location_id
+The create_action API uses a nested payload: { "ACTION_TYPE": { ...config } }. The action_type becomes the top-level key.
+Types and their config fields:
+- CUSTOM_ACTION: {name, description, method, url, headers?, body?, variables?: [{key, description, type, required}]}
+- LIVE_TRANSFER: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}
+- SEND_SMS: {name, to_phone_number, message, from_phone_number?}
+- REAL_TIME_BOOKING: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}
+- INFORMATION_EXTRACTOR: {name, fields: [{name, type, required, description}]}
+- CUSTOM_EVAL: {name, criteria: [{name, description, type}]}
+Example: action_type="CUSTOM_ACTION", config={"name": "Create Lead", "description": "Creates a CRM lead", "method": "POST", "url": "https://api.crm.com/leads"}
 Workflow: create_action, then manage_action_agents (action: "attach") to connect to assistants. Use list_actions to see existing actions.
 
 Calls can be listed and inspected after they happen:
