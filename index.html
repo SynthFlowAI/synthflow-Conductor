@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Synthflow Conductor</title>
+<title>Synthflow Aura</title>
 <script>
   !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
   posthog.init('phc_dlyyp4oL77penk6jXtJRUUpotT7eiUk3wRSY1KzzpLi', {
@@ -13,21 +13,21 @@
 </script>
 <style>
   :root {
-    --bg: #212121;
-    --bg-alt: #2f2f2f;
-    --surface: #303030;
-    --surface-hover: #3a3a3a;
-    --border: #424242;
-    --text: #ececec;
-    --text-secondary: #b4b4b4;
-    --muted: #8e8e8e;
-    --accent: #10a37f;
-    --accent-hover: #0d8c6d;
-    --tool-bg: #1e2a2a;
-    --tool-border: #2a3f3f;
-    --success: #10a37f;
-    --error: #ef4444;
-    --user-bg: #303030;
+    --bg: #2b2a27;
+    --bg-alt: #343330;
+    --surface: #393835;
+    --surface-hover: #45443f;
+    --border: #4a4945;
+    --text: #ececea;
+    --text-secondary: #b8b5ae;
+    --muted: #8e8b83;
+    --accent: #da7756;
+    --accent-hover: #c4684a;
+    --tool-bg: #32302d;
+    --tool-border: #4a4945;
+    --success: #5ba37b;
+    --error: #e06050;
+    --user-bg: #393835;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -135,8 +135,8 @@
     flex-shrink: 0;
     margin-top: 2px;
   }
-  .msg-avatar.user { background: #5436da; color: white; }
-  .msg-avatar.assistant { background: var(--accent); color: white; }
+  .msg-avatar.user { background: #6b5ce7; color: white; }
+  .msg-avatar.assistant { background: #da7756; color: white; }
   .msg-content {
     flex: 1;
     min-width: 0;
@@ -152,7 +152,7 @@
     font-size: 13px;
   }
   .msg-content pre {
-    background: #1e1e1e;
+    background: #262521;
     border-radius: 8px;
     padding: 14px 16px;
     overflow-x: auto;
@@ -184,7 +184,7 @@
     color: var(--accent);
     cursor: pointer;
   }
-  .tool-header:hover { background: rgba(16,163,127,0.06); }
+  .tool-header:hover { background: rgba(218,119,86,0.06); }
   .tool-header .arrow { transition: transform 0.2s; font-size: 10px; }
   .tool-header .arrow.open { transform: rotate(90deg); }
   .tool-badge {
@@ -194,7 +194,7 @@
     font-weight: 500;
     margin-left: auto;
   }
-  .tool-badge.running { background: rgba(16,163,127,0.15); color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .tool-badge.running { background: rgba(218,119,86,0.15); color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
   .tool-badge.running::before {
     content: '';
     width: 10px;
@@ -205,8 +205,8 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .tool-badge.done { background: rgba(16,163,127,0.15); color: var(--success); }
-  .tool-badge.error { background: rgba(239,68,68,0.15); color: var(--error); }
+  .tool-badge.done { background: rgba(91,163,123,0.15); color: var(--success); }
+  .tool-badge.error { background: rgba(224,96,80,0.15); color: var(--error); }
   .tool-body {
     display: none;
     padding: 0 14px 12px;
@@ -214,7 +214,7 @@
   }
   .tool-body.open { display: block; }
   .tool-body pre {
-    background: #1a1a1a;
+    background: #262521;
     padding: 10px;
     border-radius: 6px;
     overflow-x: auto;
@@ -423,7 +423,7 @@
 
 <!-- Welcome screen -->
 <div id="welcome">
-  <h1>Synthflow Conductor</h1>
+  <h1>Synthflow Aura</h1>
   <div class="suggestions">
     <button onclick="sendExample(this)">Create an inbound agent with a knowledge base</button>
     <button onclick="sendExample(this)">Show me my recent calls and transcripts</button>
@@ -438,7 +438,7 @@
 <!-- Input -->
 <div id="input-area">
   <div id="input-wrap">
-    <textarea id="input" rows="1" placeholder="Message Synthflow Conductor..."
+    <textarea id="input" rows="1" placeholder="Message Synthflow Aura..."
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
     <button id="send" onclick="send()">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -512,7 +512,7 @@ function addMsg(role, html, traceId) {
   const row = document.createElement("div");
   row.className = "msg-row";
 
-  const avatar = role === "user" ? "Y" : "S";
+  const avatar = role === "user" ? "Y" : "A";
   const avatarClass = role === "user" ? "user" : "assistant";
 
   let feedbackHtml = "";
@@ -908,7 +908,7 @@ function showThinking() {
   const el = document.createElement("div");
   el.id = "thinking-indicator";
   el.className = "msg-row";
-  el.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">S</div><div class="msg-content"><div class="thinking-dots"><span></span><span></span><span></span></div></div></div>`;
+  el.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">A</div><div class="msg-content"><div class="thinking-dots"><span></span><span></span><span></span></div></div></div>`;
   $chat.appendChild(el);
   scrollDown();
 }
@@ -921,7 +921,7 @@ function removeThinking() {
 function addStreamingMsg() {
   const row = document.createElement("div");
   row.className = "msg-row";
-  row.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">S</div><div class="msg-content"><p></p></div></div>`;
+  row.innerHTML = `<div class="msg-inner"><div class="msg-avatar assistant">A</div><div class="msg-content"><p></p></div></div>`;
   $chat.appendChild(row);
   scrollDown();
   return row;
