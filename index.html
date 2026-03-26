@@ -567,7 +567,7 @@ async function callClaude(msgs, traceId) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2048,
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
       tools: TOOLS,
       messages: msgs,
