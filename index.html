@@ -985,6 +985,24 @@ async function agentLoop(traceId) {
     if (!message || !message.content) break;
     messages.push({ role: "assistant", content: message.content });
 
+    // Handle max_tokens truncation — inject error results for any tool_use blocks
+    // so the conversation history stays valid for the Anthropic API
+    if (message.stop_reason === "max_tokens") {
+      const toolUses = message.content.filter(b => b.type === "tool_use");
+      if (toolUses.length > 0) {
+        const errorResults = toolUses.map(t => ({
+          type: "tool_result",
+          tool_use_id: t.id,
+          content: "Error: Response was truncated before this tool call could be completed. Please retry with a simpler request.",
+          is_error: true,
+        }));
+        messages.push({ role: "user", content: errorResults });
+        addMsg("assistant", "<p>My response was cut short. Let me try again with a simpler approach.</p>");
+        continue; // retry the loop so Claude can try again
+      }
+      break;
+    }
+
     if (message.stop_reason !== "tool_use") break;
 
     const toolUses = message.content.filter(b => b.type === "tool_use");
