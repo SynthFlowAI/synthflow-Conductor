@@ -39,11 +39,11 @@ const TOOLS = [
   },
   {
     name: "list_assistants",
-    description: "List existing Synthflow assistants. Returns an array of assistant objects with their model_id, name, type, and configuration.",
+    description: "List existing Synthflow assistants. Returns summary info (model_id, name, type, phone, voice, language). To see full config including the prompt, use update_assistant to GET a specific assistant by model_id.",
     input_schema: {
       type: "object",
       properties: {
-        limit: { type: "number", description: "Maximum number of results to return (default 20)" }
+        limit: { type: "number", description: "Maximum number of results to return (default 10)" }
       }
     }
   },
