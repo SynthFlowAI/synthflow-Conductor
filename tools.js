@@ -403,7 +403,7 @@ const TOOLS = [
       type: "object",
       properties: {
         action_type: { type: "string", enum: ["CUSTOM_ACTION", "LIVE_TRANSFER", "SEND_SMS", "REAL_TIME_BOOKING", "INFORMATION_EXTRACTOR", "CUSTOM_EVAL"], description: "Action type (uppercase)" },
-        config: { type: "object", description: "Type-specific configuration object. All types require 'name' inside config." },
+        config: { type: "object", description: "Flat configuration fields (do NOT nest under action_type key). Example for CUSTOM_ACTION: {\"name\": \"My Action\", \"description\": \"...\", \"method\": \"POST\", \"url\": \"https://...\"}" },
       },
       required: ["action_type", "config"]
     }

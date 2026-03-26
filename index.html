@@ -908,7 +908,9 @@ async function executeTool(name, input, traceId) {
     // ── Standalone Actions ─────────────────────────────────────────
     case "create_action": {
       const { action_type, config } = input;
-      return callSynthflow("POST", "/actions", { [action_type]: config }, traceId);
+      // Handle both: config={name,url,...} and config={CUSTOM_ACTION:{name,url,...}}
+      const innerConfig = config[action_type] || config;
+      return callSynthflow("POST", "/actions", { [action_type]: innerConfig }, traceId);
     }
 
     case "list_actions": {
