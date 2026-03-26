@@ -1138,9 +1138,8 @@ function sanitizeMessages(msgs) {
 }
 
 async function send() {
-  // Grab text from whichever input is active
-  const welcomeInput = document.getElementById("input");
-  const activeInput = welcomeInput.value.trim() ? welcomeInput : $input;
+  // Grab text from whichever input is visible
+  const activeInput = $welcome.classList.contains("hidden") ? $input : document.getElementById("input");
   const text = activeInput.value.trim();
   if (!text || busy) return;
 
