@@ -994,6 +994,15 @@ async function processStream(msgs, traceId) {
   }
 
   if (!thinkingRemoved) removeThinking();
+  // Clean up internal _json field from tool_use blocks before they enter conversation history
+  for (const block of contentBlocks) {
+    if (block.type === "tool_use") {
+      if (block._json) {
+        try { block.input = JSON.parse(block._json); } catch {}
+      }
+      delete block._json;
+    }
+  }
   if (message) message.content = contentBlocks;
   if (msgRow && streamedText) finalizeStreamingMsg(msgRow, streamedText, traceId);
   return message;
