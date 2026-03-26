@@ -218,7 +218,239 @@ const TOOLS = [
       },
       required: ["simulation_id"]
     }
-  }
+  },
+
+  // ── Voices ───────────────────────────────────────────────────────────
+  {
+    name: "list_voices",
+    description: "List available voices for assistants. Returns voice IDs, names, and preview URLs. Use voice IDs when creating or updating an assistant's voice_id.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 50)" },
+        offset: { type: "number", description: "Pagination offset (default 0)" },
+      }
+    }
+  },
+
+  // ── Calls (expanded) ────────────────────────────────────────────────
+  {
+    name: "list_calls",
+    description: "List calls for an assistant with optional filters. Date filters use Unix timestamps in milliseconds.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "Assistant model_id to list calls for" },
+        limit: { type: "number", description: "Max results (default 20)" },
+        offset: { type: "number", description: "Pagination offset (default 0)" },
+        from_date: { type: "number", description: "Start date as Unix timestamp in milliseconds" },
+        to_date: { type: "number", description: "End date as Unix timestamp in milliseconds" },
+        call_status: { type: "string", description: "Filter by status (e.g. completed, failed, no-answer)" },
+        duration_min: { type: "number", description: "Minimum call duration in seconds" },
+        duration_max: { type: "number", description: "Maximum call duration in seconds" },
+      },
+      required: ["model_id"]
+    }
+  },
+  {
+    name: "get_call_details",
+    description: "Get full details for a specific call including transcript, recording URL, collected variables, and metadata.",
+    input_schema: {
+      type: "object",
+      properties: {
+        call_id: { type: "string", description: "The call ID to look up" },
+      },
+      required: ["call_id"]
+    }
+  },
+
+  // ── Contacts ─────────────────────────────────────────────────────────
+  {
+    name: "create_contact",
+    description: "Create a new contact for outbound calling campaigns.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Contact name" },
+        phone_number: { type: "string", description: "Phone number in E.164 format (+11234567890)" },
+        email: { type: "string", description: "Email address" },
+        contact_metadata: { type: "object", description: "Custom metadata key-value pairs (e.g. {company: 'Acme', role: 'CFO'})" },
+      },
+      required: ["name", "phone_number"]
+    }
+  },
+  {
+    name: "find_contact",
+    description: "Find contacts. Provide contact_id to get one by ID, or phone to search by number. Omit both to list all.",
+    input_schema: {
+      type: "object",
+      properties: {
+        contact_id: { type: "string", description: "Specific contact ID to retrieve" },
+        phone: { type: "string", description: "Phone number to search for" },
+      }
+    }
+  },
+  {
+    name: "update_contact",
+    description: "Update an existing contact. Send only the fields you want to change.",
+    input_schema: {
+      type: "object",
+      properties: {
+        contact_id: { type: "string", description: "Contact ID to update" },
+        name: { type: "string", description: "New name" },
+        phone_number: { type: "string", description: "New phone number in E.164 format" },
+        email: { type: "string", description: "New email" },
+        contact_metadata: { type: "object", description: "Updated metadata key-value pairs" },
+      },
+      required: ["contact_id"]
+    }
+  },
+  {
+    name: "delete_contact",
+    description: "Delete a contact by ID.",
+    input_schema: {
+      type: "object",
+      properties: {
+        contact_id: { type: "string", description: "Contact ID to delete" },
+      },
+      required: ["contact_id"]
+    }
+  },
+
+  // ── Knowledge Bases ──────────────────────────────────────────────────
+  {
+    name: "create_knowledge_base",
+    description: "Create a new knowledge base for RAG. After creation, add sources and attach it to an assistant.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Knowledge base name" },
+        rag_use_condition: { type: "string", description: "When the agent should consult this KB (e.g. 'when asked about pricing or products')" },
+      },
+      required: ["name"]
+    }
+  },
+  {
+    name: "delete_knowledge_base",
+    description: "Delete a knowledge base and all its sources.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kb_id: { type: "string", description: "Knowledge base ID to delete" },
+      },
+      required: ["kb_id"]
+    }
+  },
+  {
+    name: "manage_knowledge_base_agent",
+    description: "Attach or detach a knowledge base to/from an assistant. Attaching makes the KB content available to the agent during calls via RAG.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kb_id: { type: "string", description: "Knowledge base ID" },
+        model_id: { type: "string", description: "Assistant model_id" },
+        action: { type: "string", enum: ["attach", "detach"], description: "Whether to attach or detach" },
+      },
+      required: ["kb_id", "model_id", "action"]
+    }
+  },
+  {
+    name: "add_knowledge_base_source",
+    description: "Add a source to a knowledge base. Use type 'text' with title+content for inline text, or type 'web' with url to crawl a page.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kb_id: { type: "string", description: "Knowledge base ID" },
+        type: { type: "string", enum: ["text", "web"], description: "Source type" },
+        title: { type: "string", description: "Title (required for text sources)" },
+        content: { type: "string", description: "Text content (required for text sources)" },
+        url: { type: "string", description: "URL to crawl (required for web sources)" },
+      },
+      required: ["kb_id", "type"]
+    }
+  },
+  {
+    name: "list_knowledge_base_sources",
+    description: "List sources in a knowledge base.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kb_id: { type: "string", description: "Knowledge base ID" },
+        limit: { type: "number", description: "Max results (default 20)" },
+        offset: { type: "number", description: "Pagination offset (default 0)" },
+      },
+      required: ["kb_id"]
+    }
+  },
+  {
+    name: "delete_knowledge_base_source",
+    description: "Remove a specific source from a knowledge base.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kb_id: { type: "string", description: "Knowledge base ID" },
+        source_id: { type: "string", description: "Source ID to remove" },
+      },
+      required: ["kb_id", "source_id"]
+    }
+  },
+
+  // ── Standalone Actions ───────────────────────────────────────────────
+  {
+    name: "create_action",
+    description: "Create a standalone action. For 'custom': provide webhook_url, method, optional headers/payload_template. For 'calcom_booking': provide api_key, event_type_id, optional calendar_id. For 'ghl_booking': provide api_key, calendar_id, optional location_id.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Action name" },
+        action_type: { type: "string", enum: ["custom", "calcom_booking", "ghl_booking"], description: "Action type" },
+        webhook_url: { type: "string", description: "Webhook URL (custom)" },
+        method: { type: "string", description: "HTTP method (custom, e.g. POST)" },
+        headers: { type: "object", description: "Request headers (custom, optional)" },
+        payload_template: { type: "string", description: "Payload template with {{variable}} placeholders (custom, optional)" },
+        api_key: { type: "string", description: "API key (calcom_booking / ghl_booking)" },
+        event_type_id: { type: "string", description: "Cal.com event type ID (calcom_booking)" },
+        calendar_id: { type: "string", description: "Calendar ID (calcom_booking optional, ghl_booking required)" },
+        location_id: { type: "string", description: "GHL location ID (ghl_booking, optional)" },
+      },
+      required: ["name", "action_type"]
+    }
+  },
+  {
+    name: "list_actions",
+    description: "List standalone actions in your workspace.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 20)" },
+        offset: { type: "number", description: "Pagination offset (default 0)" },
+      }
+    }
+  },
+  {
+    name: "delete_action",
+    description: "Delete a standalone action by ID.",
+    input_schema: {
+      type: "object",
+      properties: {
+        action_id: { type: "string", description: "Action ID to delete" },
+      },
+      required: ["action_id"]
+    }
+  },
+  {
+    name: "manage_action_agents",
+    description: "Attach or detach standalone actions to/from an assistant. Pass an array of action IDs.",
+    input_schema: {
+      type: "object",
+      properties: {
+        model_id: { type: "string", description: "Assistant model_id" },
+        actions: { type: "array", items: { type: "string" }, description: "Array of action IDs" },
+        action: { type: "string", enum: ["attach", "detach"], description: "Whether to attach or detach" },
+      },
+      required: ["model_id", "actions", "action"]
+    }
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Synthflow Conductor, a voice AI assistant builder. You help users create and configure voice AI assistants, make calls, and set up actions using the Synthflow platform.
@@ -259,4 +491,29 @@ Simulations let you test an assistant with AI-generated callers. Workflow:
 3. Run the suite (run_simulation) — returns a simulation_id
 4. Check results (get_simulation_results)
 
-Each test case needs: a name, a prompt describing the simulated caller's persona/scenario, success_criteria (array of strings), and call_success_type ("all" or "any").`;
+Each test case needs: a name, a prompt describing the simulated caller's persona/scenario, success_criteria (array of strings), and call_success_type ("all" or "any").
+
+Knowledge bases let you give assistants access to custom information via RAG (retrieval-augmented generation).
+Workflow:
+1. Create a knowledge base (create_knowledge_base) — optionally set rag_use_condition to guide when the agent should consult it
+2. Add sources — text content or web URLs (add_knowledge_base_source)
+3. Attach the KB to an assistant (manage_knowledge_base_agent with action: "attach")
+The agent will search the KB during calls when relevant. To inspect a KB, use list_knowledge_base_sources. To disconnect, use manage_knowledge_base_agent with action: "detach".
+
+Standalone actions are reusable integrations that can be shared across multiple assistants. These are different from inline actions on create_assistant/update_assistant — standalone actions are managed separately.
+Types:
+- custom: HTTP webhook — provide webhook_url, method, optional headers and payload_template with {{variable}} placeholders
+- calcom_booking: Cal.com scheduling — provide api_key, event_type_id, optional calendar_id
+- ghl_booking: GoHighLevel booking — provide api_key, calendar_id, optional location_id
+Workflow: create_action, then manage_action_agents (action: "attach") to connect to assistants. Use list_actions to see existing actions.
+
+Calls can be listed and inspected after they happen:
+- list_calls: Filter by assistant (model_id required), date range, status, duration. Date filters (from_date, to_date) use Unix timestamps in milliseconds.
+- get_call_details: Returns full transcript, recording URL, collected variables, and call metadata for a specific call_id.
+
+Contacts are people for outbound calling campaigns. Each has a name, phone number (E.164), optional email, and custom metadata.
+- create_contact / find_contact / update_contact / delete_contact
+- find_contact can look up by contact_id or search by phone number
+Use contacts as targets for outbound calls via create_call.
+
+Voices can be browsed with list_voices. Each voice has a voice_id and name. Pass the voice_id when creating or updating an assistant's agent.voice_id configuration.`;
