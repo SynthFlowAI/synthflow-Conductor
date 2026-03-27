@@ -772,7 +772,12 @@ async function callSynthflow(method, path, payload, traceId) {
     showSetup();
     throw new Error("Invalid Synthflow API key. Please check your key and try again.");
   }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error || data?.message || data?.detail || JSON.stringify(data);
+    throw new Error(`Synthflow API error (${res.status}): ${msg}`);
+  }
+  return data;
 }
 
 // ── Tool execution ──────────────────────────────────────────────────
