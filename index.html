@@ -13,21 +13,23 @@
 </script>
 <style>
   :root {
-    --bg: #f7f7f5;
+    --bg: #f9f8fc;
     --bg-alt: #ffffff;
     --surface: #ffffff;
-    --surface-hover: #f0efed;
-    --border: #e0dfdb;
-    --text: #1a1a1a;
-    --text-secondary: #5a5a58;
-    --muted: #8e8e8a;
-    --accent: #10a37f;
-    --accent-hover: #0d8c6d;
-    --tool-bg: #f0f9f6;
-    --tool-border: #d1e8e0;
-    --success: #10a37f;
+    --surface-hover: #f3f1f9;
+    --border: #e8e5f0;
+    --text: #1a1a2e;
+    --text-secondary: #5a5870;
+    --muted: #9694a8;
+    --accent: #7c3aed;
+    --accent-hover: #6d28d9;
+    --tool-bg: #f5f3ff;
+    --tool-border: #ddd6fe;
+    --success: #7c3aed;
     --error: #ef4444;
-    --user-bg: #f0efed;
+    --user-bg: #f3f1f9;
+    --sidebar-bg: #f3f1f9;
+    --sidebar-width: 56px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -36,7 +38,58 @@
     color: var(--text);
     height: 100vh;
     display: flex;
+    flex-direction: row;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
     flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+  .sidebar-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sidebar-icon:hover { background: var(--surface-hover); color: var(--text); }
+  .sidebar-icon.active { background: var(--surface); color: var(--accent); }
+  .sidebar-icon svg { width: 20px; height: 20px; }
+  .sidebar-spacer { flex: 1; }
+
+  /* ── Main content area ──────────────────────────────── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   /* ── Key setup overlay ───────────────────────────────── */
@@ -136,7 +189,7 @@
     flex-shrink: 0;
     margin-top: 2px;
   }
-  .msg-avatar.user { background: #5436da; color: white; }
+  .msg-avatar.user { background: #a78bfa; color: white; }
   .msg-avatar.assistant { background: var(--accent); color: white; }
   .msg-content {
     flex: 1;
@@ -147,14 +200,14 @@
   .msg-content p { margin-bottom: 8px; }
   .msg-content p:last-child { margin-bottom: 0; }
   .msg-content code {
-    background: #f0efed;
+    background: #f3f1f9;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 13px;
-    color: #1a1a1a;
+    color: var(--text);
   }
   .msg-content pre {
-    background: #f0efed;
+    background: #f3f1f9;
     border-radius: 8px;
     padding: 14px 16px;
     overflow-x: auto;
@@ -186,7 +239,7 @@
     color: var(--accent);
     cursor: pointer;
   }
-  .tool-header:hover { background: rgba(16,163,127,0.06); }
+  .tool-header:hover { background: rgba(124,58,237,0.06); }
   .tool-header .arrow { transition: transform 0.2s; font-size: 10px; }
   .tool-header .arrow.open { transform: rotate(90deg); }
   .tool-badge {
@@ -196,7 +249,7 @@
     font-weight: 500;
     margin-left: auto;
   }
-  .tool-badge.running { background: rgba(16,163,127,0.1); color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .tool-badge.running { background: rgba(124,58,237,0.1); color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
   .tool-badge.running::before {
     content: '';
     width: 10px;
@@ -207,7 +260,7 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .tool-badge.done { background: rgba(16,163,127,0.1); color: var(--success); }
+  .tool-badge.done { background: rgba(124,58,237,0.1); color: var(--success); }
   .tool-badge.error { background: rgba(239,68,68,0.1); color: var(--error); }
   .tool-body {
     display: none;
@@ -216,7 +269,7 @@
   }
   .tool-body.open { display: block; }
   .tool-body pre {
-    background: #f0efed;
+    background: #f3f1f9;
     padding: 10px;
     border-radius: 6px;
     overflow-x: auto;
@@ -265,13 +318,14 @@
   #input-area.hidden { display: none; }
   #welcome-input-wrap,
   #chat-input-wrap {
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     display: flex;
     align-items: flex-end;
     padding: 8px 8px 8px 20px;
     transition: border-color 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   }
   #chat-input-wrap {
     max-width: 680px;
@@ -279,7 +333,7 @@
   }
   #welcome-input-wrap { margin-bottom: 0; }
   #welcome-input-wrap:focus-within,
-  #chat-input-wrap:focus-within { border-color: #c0bfbb; }
+  #chat-input-wrap:focus-within { border-color: var(--accent); }
   #input, #chat-input {
     flex: 1;
     background: none;
@@ -296,7 +350,7 @@
   }
   #input::placeholder, #chat-input::placeholder { color: var(--muted); }
   #send, #chat-send {
-    background: #1a1a1a;
+    background: var(--accent);
     color: #ffffff;
     border: none;
     border-radius: 50%;
@@ -358,71 +412,94 @@
     padding: 40px 24px;
   }
   #welcome.hidden { display: none; }
+  .welcome-logo {
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 24px;
+  }
   .welcome-card {
     max-width: 680px;
     width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 32px 32px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    text-align: center;
   }
   .welcome-card h1 {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 600;
     color: var(--text);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .welcome-card .subtitle {
     font-size: 15px;
     color: var(--muted);
-    margin-bottom: 24px;
+    margin-bottom: 28px;
+    line-height: 1.6;
   }
   .suggestions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 16px;
+    justify-content: center;
   }
-  @media (max-width: 560px) { .suggestions { grid-template-columns: 1fr; } }
   .suggestions button {
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-radius: 20px;
+    padding: 8px 16px;
     color: var(--text-secondary);
     font-size: 13px;
     cursor: pointer;
     font-family: inherit;
-    text-align: left;
+    text-align: center;
     line-height: 1.4;
     transition: background 0.15s, border-color 0.15s;
   }
-  .suggestions button:hover { background: var(--surface-hover); border-color: #c0bfbb; }
+  .suggestions button:hover { background: var(--surface-hover); border-color: var(--accent); }
 
-  /* ── Settings gear ──────────────────────────────────────── */
-  .gear-btn {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    z-index: 10;
-  }
-  .gear-btn:hover { background: var(--surface-hover); color: var(--text); }
-  .gear-btn svg { width: 20px; height: 20px; display: block; }
+  /* ── Settings gear (now in sidebar) ───────────────────── */
 </style>
 </head>
 <body>
 
-<!-- Settings gear -->
-<button class="gear-btn" onclick="showSetup()" title="Settings">
-  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-</button>
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sidebar-logo">S</div>
+  <button class="sidebar-icon active" title="New chat">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+  </button>
+  <button class="sidebar-icon" title="History">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+  </button>
+  <button class="sidebar-icon" title="Agents">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+  </button>
+  <button class="sidebar-icon" title="Calls">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+  </button>
+  <button class="sidebar-icon" title="Knowledge">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+  </button>
+  <div class="sidebar-spacer"></div>
+  <button class="sidebar-icon" onclick="showSetup()" title="Settings">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</nav>
+
+<!-- Main content area -->
+<div id="main">
 
 <!-- Key setup overlay -->
 <div id="setup-overlay">
@@ -443,9 +520,10 @@
 
 <!-- Welcome screen -->
 <div id="welcome">
+  <div class="welcome-logo">S</div>
   <div class="welcome-card">
-    <h1>Synthflow Aura</h1>
-    <p class="subtitle">What would you like to build?</p>
+    <h1>What are we doing today?</h1>
+    <p class="subtitle">Manage your Synthflow voice AI agents, calls, knowledge bases, and actions through natural conversation.</p>
     <div id="welcome-input-wrap">
       <textarea id="input" rows="1" placeholder="Describe what you need..."
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
@@ -475,6 +553,8 @@
     </button>
   </div>
 </div>
+
+</div><!-- /main -->
 
 <script src="tools.js"></script>
 <script>
