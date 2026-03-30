@@ -787,10 +787,19 @@ async function callSynthflow(method, path, payload, traceId) {
   let data;
   try { data = JSON.parse(text); } catch { data = null; }
   if (!res.ok) {
-    if (!data) throw new Error(`Synthflow API error (${res.status}): ${text.slice(0, 200)}`);
-    const err = data?.error || data?.message || data?.detail;
-    const msg = typeof err === "object" ? JSON.stringify(err) : err || JSON.stringify(data);
-    throw new Error(`Synthflow API error (${res.status}): ${msg}`);
+    let msg;
+    if (!data) {
+      msg = text.slice(0, 200);
+    } else {
+      const err = data?.error || data?.message || data?.detail;
+      msg = typeof err === "object" ? JSON.stringify(err) : err || JSON.stringify(data);
+    }
+    const error = new Error(`Synthflow API error (${res.status}): ${msg}`);
+    error.statusCode = res.status;
+    error.apiPath = path;
+    error.apiMethod = method;
+    error.responseBody = data || text.slice(0, 500);
+    throw error;
   }
   return data || text;
 }
@@ -1198,6 +1207,18 @@ async function agentLoop(traceId) {
         result = { error: e.message };
         updateToolCall(uiId, "error", result);
         posthog.capture("tool_executed", { tool: tool.name, status: "error", error: e.message, $ai_trace_id: traceId, $ai_session_id: conversationSessionId });
+        posthog.captureException(e, {
+          properties: {
+            tool_name: tool.name,
+            tool_input: JSON.stringify(tool.input).slice(0, 500),
+            status_code: e.statusCode,
+            api_path: e.apiPath,
+            api_method: e.apiMethod,
+            response_body: typeof e.responseBody === "object" ? JSON.stringify(e.responseBody) : e.responseBody,
+            $ai_trace_id: traceId,
+            $ai_session_id: conversationSessionId,
+          },
+        });
       }
       toolResults.push({
         type: "tool_result",
