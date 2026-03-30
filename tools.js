@@ -223,13 +223,15 @@ const TOOLS = [
   // ── Voices ───────────────────────────────────────────────────────────
   {
     name: "list_voices",
-    description: "List available voices for assistants. Returns voice IDs, names, and preview URLs. Use voice IDs when creating or updating an assistant's voice_id.",
+    description: "List available voices for assistants. Returns voice IDs, names, and preview URLs. Use voice IDs when creating or updating an assistant's voice_id. Requires the workspace ID (found in the Synthflow dashboard).",
     input_schema: {
       type: "object",
       properties: {
+        workspace: { type: "string", description: "Workspace ID (found in the Synthflow dashboard)" },
         limit: { type: "number", description: "Max results (default 50)" },
         offset: { type: "number", description: "Pagination offset (default 0)" },
-      }
+      },
+      required: ["workspace"]
     }
   },
 
@@ -362,7 +364,7 @@ const TOOLS = [
       properties: {
         kb_id: { type: "string", description: "Knowledge base ID" },
         type: { type: "string", enum: ["text", "web"], description: "Source type" },
-        title: { type: "string", description: "Title (required for text sources)" },
+        name: { type: "string", description: "Source name (required)" },
         content: { type: "string", description: "Text content (required for text sources)" },
         url: { type: "string", description: "URL to crawl (required for web sources)" },
       },
@@ -398,12 +400,12 @@ const TOOLS = [
   // ── Standalone Actions ───────────────────────────────────────────────
   {
     name: "create_action",
-    description: "Create a standalone action. Pass action_type and a config object with type-specific fields. CUSTOM_ACTION config: {name, url, http_mode (GET/POST/PUT/DELETE), description?, headers?, body?, variables?, run_action_before_call_start?}. LIVE_TRANSFER config: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}. SEND_SMS config: {name, to_phone_number, message, from_phone_number?}. REAL_TIME_BOOKING config: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}. INFORMATION_EXTRACTOR config: {name, fields: [{name, type, required, description}]}. CUSTOM_EVAL config: {name, criteria: [{name, description, type}]}.",
+    description: "Create a standalone action. Pass action_type and a config object with type-specific fields. CUSTOM_ACTION config: {name (required), url (required), http_mode: GET/POST/PATCH/PUT (required), run_action_before_call_start: bool (required), description?, speech_while_using_the_tool?, variables_during_the_call?: [{name, description, example, type}], headers?: [{key, value}], query_parameters?: [{key, value}], json_body_stringified?}. LIVE_TRANSFER config: {phone (required), transfer_mode: cold_transfer/warm_transfer/warm_transfer_with_context (required), instructions (required), initiating_msg (required), message_to_transfer_target?, timeout?, goodbye_msg?, failed_msg?}. SEND_SMS config: {content (required, 128 char limit), instructions (required)}. REAL_TIME_BOOKING config: {first_appt_date (required), max_time_slots (required), min_hours_diff (required), no_of_days (required), timezone (required), CALCOM?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}. INFORMATION_EXTRACTOR config: subtypes YES_NO/SINGLE_CHOICE/OPEN_QUESTION nested under their key, e.g. {YES_NO: {identifier, description}}. CUSTOM_EVAL config: {question: {identifier, text, category: pass_fail/numeric/descriptive/likert_scale, expected_result}}.",
     input_schema: {
       type: "object",
       properties: {
         action_type: { type: "string", enum: ["CUSTOM_ACTION", "LIVE_TRANSFER", "SEND_SMS", "REAL_TIME_BOOKING", "INFORMATION_EXTRACTOR", "CUSTOM_EVAL"], description: "Action type (uppercase)" },
-        config: { type: "object", description: "Flat configuration fields (do NOT nest under action_type key). Example for CUSTOM_ACTION: {\"name\": \"My Action\", \"url\": \"https://...\", \"http_mode\": \"POST\"}" },
+        config: { type: "object", description: "Flat configuration fields (do NOT nest under action_type key). Example for CUSTOM_ACTION: {\"name\": \"My Action\", \"url\": \"https://...\", \"http_mode\": \"POST\", \"run_action_before_call_start\": false}" },
       },
       required: ["action_type", "config"]
     }
@@ -494,20 +496,20 @@ Each test case needs: a name, a prompt describing the simulated caller's persona
 Knowledge bases let you give assistants access to custom information via RAG (retrieval-augmented generation).
 Workflow:
 1. Create a knowledge base (create_knowledge_base) — optionally set rag_use_condition to guide when the agent should consult it
-2. Add sources — text content or web URLs (add_knowledge_base_source)
+2. Add sources — text content or web URLs (add_knowledge_base_source). Every source needs a name, type, and either content (for text) or url (for web/pdf).
 3. Attach the KB to an assistant (manage_knowledge_base_agent with action: "attach")
 The agent will search the KB during calls when relevant. To inspect a KB, use list_knowledge_base_sources. To disconnect, use manage_knowledge_base_agent with action: "detach".
 
 Standalone actions are reusable integrations that can be shared across multiple assistants. These are different from inline actions on create_assistant/update_assistant — standalone actions are managed separately.
 The create_action API uses a nested payload: { "ACTION_TYPE": { ...config } }. The action_type becomes the top-level key.
-Types and their config fields:
-- CUSTOM_ACTION: {name, url, http_mode (GET/POST/PUT/DELETE), description?, headers?, body?, variables?: [{key, description, type, required}], run_action_before_call_start?}
-- LIVE_TRANSFER: {name, phone_number, message_to_target?, message_to_customer?, transfer_type?}
-- SEND_SMS: {name, to_phone_number, message, from_phone_number?}
-- REAL_TIME_BOOKING: {name, timezone, calcom?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}
-- INFORMATION_EXTRACTOR: {name, fields: [{name, type, required, description}]}
-- CUSTOM_EVAL: {name, criteria: [{name, description, type}]}
-Example: action_type="CUSTOM_ACTION", config={"name": "Create Lead", "url": "https://api.crm.com/leads", "http_mode": "POST"}
+Types and their required/optional config fields:
+- CUSTOM_ACTION: {name (required), url (required), http_mode: GET/POST/PATCH/PUT (required), run_action_before_call_start: bool (required, usually false), description?, speech_while_using_the_tool?, variables_during_the_call?: [{name, description, example, type}], headers?: [{key, value}], query_parameters?: [{key, value}], json_body_stringified?: string}
+- LIVE_TRANSFER: {phone (required, E.164), transfer_mode: cold_transfer/warm_transfer/warm_transfer_with_context (required), instructions (required, when to transfer), initiating_msg (required, what to say to caller), message_to_transfer_target?, timeout?, goodbye_msg?, failed_msg?}
+- SEND_SMS: {content (required, 128 char limit, supports {{var}}), instructions (required, when to send)}
+- REAL_TIME_BOOKING: {first_appt_date (required), max_time_slots (required), min_hours_diff (required), no_of_days (required), timezone (required), CALCOM?: {event_id, integration?, user_email?, sms_boolean?, sms_message?}}
+- INFORMATION_EXTRACTOR: subtypes nested under key — {YES_NO: {identifier, description}}, {SINGLE_CHOICE: {identifier, description, choices}}, {OPEN_QUESTION: {identifier, description, examples}}
+- CUSTOM_EVAL: {question: {identifier, text, category: pass_fail/numeric/descriptive/likert_scale, expected_result}}
+Example: action_type="CUSTOM_ACTION", config={"name": "Create Lead", "url": "https://api.crm.com/leads", "http_mode": "POST", "run_action_before_call_start": false}
 Workflow: create_action, then manage_action_agents (action: "attach") to connect to assistants. Use list_actions to see existing actions.
 
 Calls can be listed and inspected after they happen:
@@ -519,7 +521,7 @@ Contacts are people for outbound calling campaigns. Each has a name, phone numbe
 - find_contact can look up by contact_id or search by phone number
 Use contacts as targets for outbound calls via create_call.
 
-Voices can be browsed with list_voices. Each voice has a voice_id and name. Pass the voice_id when creating or updating an assistant's agent.voice_id configuration.
+Voices can be browsed with list_voices (requires workspace ID from the Synthflow dashboard). Each voice has a voice_id and name. Pass the voice_id when creating or updating an assistant's agent.voice_id configuration.
 
 IMPORTANT — verify before claiming success:
 - After creating or updating an assistant, check the API response to confirm what was actually saved. Do NOT tell the user something was set up unless the response confirms it.
