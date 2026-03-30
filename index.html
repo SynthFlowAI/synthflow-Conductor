@@ -385,6 +385,54 @@
 
   .typing { color: var(--muted); font-style: italic; font-size: 14px; }
 
+  /* ── File upload ──────────────────────────────────────── */
+  .upload-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+  .upload-btn:hover { color: var(--accent); }
+  .upload-btn svg { width: 20px; height: 20px; }
+  .file-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 4px 6px;
+  }
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 8px 3px 10px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .file-chip .remove-file {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .file-chip .remove-file:hover { color: var(--error, #e53e3e); }
+  .drag-over {
+    border-color: var(--accent) !important;
+    background: rgba(72, 187, 120, 0.05) !important;
+  }
+
   /* ── Streaming & loading animations ────────────────── */
   .thinking-dots {
     display: flex;
@@ -487,6 +535,12 @@
 
   /* ── Settings gear (now in sidebar) ───────────────────── */
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.9.155/pdf.min.mjs" type="module"></script>
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.9.155/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.9.155/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjsLib;
+</script>
 </head>
 <body>
 
@@ -541,12 +595,19 @@
     <h1>What are we doing today?</h1>
     <p class="subtitle">Manage your Synthflow voice AI agents, calls, knowledge bases, and actions through natural conversation.</p>
     <div id="welcome-input-wrap">
-      <textarea id="input" rows="1" placeholder="Describe what you need..."
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
-      <button id="send" onclick="send()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
+      <div class="file-chips" id="welcome-file-chips"></div>
+      <div style="display:flex;align-items:flex-end;width:100%">
+        <button class="upload-btn" onclick="document.getElementById('file-upload').click()" title="Attach files (.txt, .pdf, .md, .csv)">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+        </button>
+        <textarea id="input" rows="1" placeholder="Describe what you need..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+        <button id="send" onclick="send()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
     </div>
+    <input type="file" id="file-upload" multiple accept=".txt,.pdf,.md,.csv" style="display:none" onchange="handleFileSelect(this.files)">
     <div class="suggestions">
       <button onclick="sendExample(this)">Create an inbound agent with a knowledge base</button>
       <button onclick="sendExample(this)">Show me my recent calls and transcripts</button>
@@ -562,12 +623,19 @@
 <!-- Input (shown during chat) -->
 <div id="input-area" class="hidden">
   <div id="chat-input-wrap">
-    <textarea id="chat-input" rows="1" placeholder="Message Synthflow Aura..."
-      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
-    <button id="chat-send" onclick="send()">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-    </button>
+    <div class="file-chips" id="chat-file-chips"></div>
+    <div style="display:flex;align-items:flex-end;width:100%">
+      <button class="upload-btn" onclick="document.getElementById('chat-file-upload').click()" title="Attach files (.txt, .pdf, .md, .csv)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+      </button>
+      <textarea id="chat-input" rows="1" placeholder="Message Synthflow Aura..."
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+      <button id="chat-send" onclick="send()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
   </div>
+  <input type="file" id="chat-file-upload" multiple accept=".txt,.pdf,.md,.csv" style="display:none" onchange="handleFileSelect(this.files)">
 </div>
 
 </div><!-- /main -->
@@ -639,6 +707,83 @@ const $welcome = document.getElementById("welcome");
 const $inputArea = document.getElementById("input-area");
 let $input = document.getElementById("input");
 let $send = document.getElementById("send");
+
+// ── File upload handling ───────────────────────────────────────────
+let pendingFiles = []; // [{name, text}]
+
+async function extractText(file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (["txt", "md", "csv"].includes(ext)) {
+    return await file.text();
+  }
+  if (ext === "pdf") {
+    if (!window.pdfjsLib) throw new Error("PDF library not loaded yet. Please try again.");
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      pages.push(tc.items.map(item => item.str).join(" "));
+    }
+    return pages.join("\n\n");
+  }
+  throw new Error(`Unsupported file type: .${ext}`);
+}
+
+async function handleFileSelect(fileList) {
+  for (const file of fileList) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert(`${file.name} is too large (max 5MB).`);
+      continue;
+    }
+    try {
+      const text = await extractText(file);
+      pendingFiles.push({ name: file.name, text });
+      renderFileChips();
+    } catch (e) {
+      alert(`Could not read ${file.name}: ${e.message}`);
+    }
+  }
+  // Reset file inputs so the same file can be re-selected
+  document.getElementById("file-upload").value = "";
+  document.getElementById("chat-file-upload").value = "";
+}
+
+function removeFile(index) {
+  pendingFiles.splice(index, 1);
+  renderFileChips();
+}
+
+function renderFileChips() {
+  ["welcome-file-chips", "chat-file-chips"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (pendingFiles.length === 0) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = pendingFiles.map((f, i) =>
+      `<span class="file-chip">${escapeHtml(f.name)}<button class="remove-file" onclick="removeFile(${i})">&times;</button></span>`
+    ).join("");
+  });
+}
+
+// Drag and drop on input wraps
+["welcome-input-wrap", "chat-input-wrap"].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("drag-over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("drag-over"));
+  el.addEventListener("drop", e => {
+    e.preventDefault();
+    el.classList.remove("drag-over");
+    const files = [...e.dataTransfer.files].filter(f =>
+      /\.(txt|md|csv|pdf)$/i.test(f.name)
+    );
+    if (files.length) handleFileSelect(files);
+  });
+});
 
 function scrollDown() {
   requestAnimationFrame(() => $chat.scrollTo(0, $chat.scrollHeight));
@@ -1325,13 +1470,34 @@ async function send() {
   $input.value = "";
   $input.style.height = "auto";
 
+  // Collect attached files
+  const attachedFiles = [...pendingFiles];
+  pendingFiles = [];
+  renderFileChips();
+
   const messageTraceId = crypto.randomUUID();
 
-  addMsg("user", escapeHtml(text));
-  posthog.capture("message_sent", { message_length: text.length, conversation_length: messages.length, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
+  // Build display text with file badges
+  let displayHtml = escapeHtml(text);
+  if (attachedFiles.length) {
+    const badges = attachedFiles.map(f => `<span class="file-chip">${escapeHtml(f.name)}</span>`).join(" ");
+    displayHtml = `<div class="file-chips" style="margin-bottom:6px">${badges}</div>${displayHtml}`;
+  }
+  addMsg("user", displayHtml);
+
+  // Build message content for Claude — prepend doc text
+  let messageContent = text;
+  if (attachedFiles.length) {
+    const docBlock = attachedFiles.map(f =>
+      `<uploaded_document name="${f.name}">\n${f.text.slice(0, 50000)}\n</uploaded_document>`
+    ).join("\n\n");
+    messageContent = `${docBlock}\n\n${text}`;
+  }
+
+  posthog.capture("message_sent", { message_length: messageContent.length, files_attached: attachedFiles.length, conversation_length: messages.length, $ai_trace_id: messageTraceId, $ai_session_id: conversationSessionId });
 
   showThinking();
-  messages.push({ role: "user", content: text });
+  messages.push({ role: "user", content: messageContent });
   messages = sanitizeMessages(messages);
 
   try {
