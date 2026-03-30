@@ -186,7 +186,7 @@ const TOOLS = [
   },
   {
     name: "list_simulation_cases",
-    description: "List simulation test cases for a suite or agent.",
+    description: "List simulation test case definitions (not run results — use get_simulation_results for that).",
     input_schema: {
       type: "object",
       properties: {
@@ -210,11 +210,11 @@ const TOOLS = [
   },
   {
     name: "get_simulation_results",
-    description: "List simulation sessions with per-case pass/fail, conversation transcripts, and success criteria analysis. Can filter by agent or date range.",
+    description: "Retrieve simulation run results — pass/fail verdicts, conversation transcripts, and success criteria analysis for every test case. Use target_agent_id (the assistant's model_id) to get all runs for a specific agent. This is the only way to see simulation outcomes after run_simulation.",
     input_schema: {
       type: "object",
       properties: {
-        target_agent_id: { type: "string", description: "Filter results to a specific agent ID" },
+        target_agent_id: { type: "string", description: "The assistant's model_id — returns all simulation sessions for this agent" },
         page_number: { type: "integer", description: "Page number (default: 1)" },
         page_size: { type: "integer", description: "Number of items per page (default: 10)" },
         start_date: { type: "string", description: "Filter sessions created on or after this date (ISO 8601)" },
@@ -516,7 +516,7 @@ Simulations let you test an assistant with AI-generated callers. Workflow:
 1. Create a simulation suite for the agent (create_simulation_suite)
 2. Add test cases — each case has a caller persona prompt and success criteria (create_simulation_case)
 3. Run the suite (run_simulation)
-4. Check results (get_simulation_results) — lists sessions with pass/fail, transcripts, and success criteria analysis. Filter by target_agent_id to see results for a specific agent.
+4. Check results (get_simulation_results with target_agent_id = the assistant's model_id) — this returns all simulation sessions for that agent, each with per-case pass/fail, transcripts, and success criteria analysis. IMPORTANT: to find simulation results for an agent, always use get_simulation_results with target_agent_id — do NOT use list_simulation_cases, which only returns test case definitions, not run results.
 
 Each test case needs: a name, a prompt describing the simulated caller's persona/scenario, success_criteria (array of strings), and call_success_type ("all" or "any").
 
