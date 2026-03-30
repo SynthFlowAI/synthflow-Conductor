@@ -197,7 +197,7 @@ const TOOLS = [
   },
   {
     name: "run_simulation",
-    description: "Execute all test cases in a simulation suite against the target agent. Returns a simulation_id to check results.",
+    description: "Execute all test cases in a simulation suite against the target agent. Returns a session_id to check results with get_simulation_results.",
     input_schema: {
       type: "object",
       properties: {
@@ -210,13 +210,13 @@ const TOOLS = [
   },
   {
     name: "get_simulation_results",
-    description: "Get the results of a simulation run, including per-case pass/fail and conversation transcripts.",
+    description: "Get the results of a simulation suite execution, including per-case pass/fail, conversation transcripts, and success criteria analysis.",
     input_schema: {
       type: "object",
       properties: {
-        simulation_id: { type: "string", description: "The simulation run ID returned from run_simulation" },
+        simulation_session_id: { type: "string", description: "The session_id returned from run_simulation" },
       },
-      required: ["simulation_id"]
+      required: ["simulation_session_id"]
     }
   },
 

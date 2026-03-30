@@ -921,7 +921,7 @@ async function executeTool(name, input, traceId) {
     }
 
     case "get_simulation_results":
-      return callSynthflow("GET", `/simulations/${input.simulation_id}`, null, traceId);
+      return callSynthflow("GET", `/simulations/session/${input.simulation_session_id}`, null, traceId);
 
     // ── Voices ─────────────────────────────────────────────────────
     case "list_voices": {
