@@ -960,6 +960,12 @@ async function executeTool(name, input, traceId) {
       return callSynthflow("DELETE", `/contacts/${input.contact_id}`, null, traceId);
 
     // ── Knowledge Bases ────────────────────────────────────────────
+    case "list_knowledge_bases": {
+      const limit = input.limit || 20;
+      const offset = input.offset || 0;
+      return callSynthflow("GET", `/knowledge_base?limit=${limit}&offset=${offset}`, null, traceId);
+    }
+
     case "create_knowledge_base":
       return callSynthflow("POST", "/knowledge_base", {
         name: input.name,

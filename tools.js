@@ -321,6 +321,17 @@ const TOOLS = [
 
   // ── Knowledge Bases ──────────────────────────────────────────────────
   {
+    name: "list_knowledge_bases",
+    description: "List knowledge bases in the workspace. Returns IDs, names, and RAG use conditions.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max results (default 20)" },
+        offset: { type: "number", description: "Pagination offset (default 0)" },
+      }
+    }
+  },
+  {
     name: "create_knowledge_base",
     description: "Create a new knowledge base for RAG. After creation, add sources and attach it to an assistant.",
     input_schema: {
