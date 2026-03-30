@@ -210,13 +210,16 @@ const TOOLS = [
   },
   {
     name: "get_simulation_results",
-    description: "Get the results of a simulation suite execution, including per-case pass/fail, conversation transcripts, and success criteria analysis.",
+    description: "List simulation sessions with per-case pass/fail, conversation transcripts, and success criteria analysis. Can filter by agent or date range.",
     input_schema: {
       type: "object",
       properties: {
-        simulation_session_id: { type: "string", description: "The session_id returned from run_simulation" },
+        target_agent_id: { type: "string", description: "Filter results to a specific agent ID" },
+        page_number: { type: "integer", description: "Page number (default: 1)" },
+        page_size: { type: "integer", description: "Number of items per page (default: 10)" },
+        start_date: { type: "string", description: "Filter sessions created on or after this date (ISO 8601)" },
+        end_date: { type: "string", description: "Filter sessions created on or before this date (ISO 8601)" },
       },
-      required: ["simulation_session_id"]
     }
   },
 
@@ -512,8 +515,8 @@ Both tools automatically merge with the assistant's existing actions.
 Simulations let you test an assistant with AI-generated callers. Workflow:
 1. Create a simulation suite for the agent (create_simulation_suite)
 2. Add test cases — each case has a caller persona prompt and success criteria (create_simulation_case)
-3. Run the suite (run_simulation) — returns a simulation_id
-4. Check results (get_simulation_results)
+3. Run the suite (run_simulation)
+4. Check results (get_simulation_results) — lists sessions with pass/fail, transcripts, and success criteria analysis. Filter by target_agent_id to see results for a specific agent.
 
 Each test case needs: a name, a prompt describing the simulated caller's persona/scenario, success_criteria (array of strings), and call_success_type ("all" or "any").
 

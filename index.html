@@ -929,8 +929,15 @@ async function executeTool(name, input, traceId) {
       return callSynthflow("POST", `/simulation_suites/${input.suite_id}/execute${query}`, null, traceId);
     }
 
-    case "get_simulation_results":
-      return callSynthflow("GET", `/simulations/session/${input.simulation_session_id}`, null, traceId);
+    case "get_simulation_results": {
+      const params = new URLSearchParams();
+      if (input.target_agent_id) params.set("target_agent_id", input.target_agent_id);
+      if (input.start_date) params.set("start_date", input.start_date);
+      if (input.end_date) params.set("end_date", input.end_date);
+      params.set("page_number", input.page_number || 1);
+      params.set("page_size", input.page_size || 10);
+      return callSynthflow("GET", `/simulations/sessions?${params.toString()}`, null, traceId);
+    }
 
     // ── Voices ─────────────────────────────────────────────────────
     case "list_voices": {
