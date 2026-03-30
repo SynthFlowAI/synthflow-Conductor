@@ -1043,6 +1043,10 @@ async function executeTool(name, input, traceId) {
         actions: input.actions,
       }, traceId);
 
+    // ── Subaccounts ───────────────────────────────────────────────
+    case "list_subaccounts":
+      return callSynthflow("GET", `/subaccounts/?workspace_id=${encodeURIComponent(input.workspace_id)}`, null, traceId);
+
     default:
       return { error: `Unknown tool: ${name}` };
   }

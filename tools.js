@@ -456,6 +456,19 @@ const TOOLS = [
       required: ["model_id", "actions", "action"]
     }
   },
+
+  // ── Subaccounts ──────────────────────────────────────────────────────
+  {
+    name: "list_subaccounts",
+    description: "List subaccounts under a parent workspace. Requires the parent workspace ID (found in the Synthflow dashboard). Only works if your account has subaccount access.",
+    input_schema: {
+      type: "object",
+      properties: {
+        workspace_id: { type: "string", description: "Parent workspace ID (found in your Synthflow dashboard)" },
+      },
+      required: ["workspace_id"]
+    }
+  },
 ];
 
 const SYSTEM_PROMPT = `You are Synthflow Aura, a voice AI assistant builder. You help users create and configure voice AI assistants, make calls, and set up actions using the Synthflow platform.
